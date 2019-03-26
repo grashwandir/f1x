@@ -30,7 +30,7 @@
     <groupId>org.f1x</groupId>
     <artifactId>f1x</artifactId>
     <packaging>jar</packaging>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.7.0</version>
     <name>f1x</name>
     <url>https://code.google.com/p/f1x/</url>
     <description>Java implementation of FIX Protocol.</description>
@@ -52,7 +52,7 @@
                     <argLine>-Dfile.encoding=${project.build.sourceEncoding}</argLine>
                 </configuration>
             </plugin>
-			<!-- 
+			<!--
 			<plugin> Test coverage
 			  <groupId>org.jacoco</groupId>
 			  <artifactId>jacoco-maven-plugin</artifactId>
