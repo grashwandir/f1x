@@ -21,13 +21,13 @@ import org.f1x.util.AsciiUtils;
  * Micro FIX parser. Thread-safe.
  *
  * Override {@link #onTagNumber(int, Object)} and {@link #onTagValue(int, byte[], int, int, Object)}  to get callback on each tag and value.
+ * @param <Cookie>
  */
 public abstract class SimpleMessageScanner<Cookie> {
 
     public static final int MIN_MESSAGE_LENGTH = 63; // min message example: 8=FIX.4.?|9=??|35=?|34=?|49=?|56=?|52=YYYYMMDD-HH:MM:SS|10=???|
     private static final byte [] HEADER_START = AsciiUtils.getBytes("8=FIX.");
     private static final int HEADER_START_LENGTH = HEADER_START.length;
-    private static final byte SOH = 1;
     private static final byte EQUALS = '=';
     private static final int BODY_LENGTH_TAG_NUM = 9;
     private static final int CHECKSUM_LENGTH = 8;  // including SOH
@@ -39,7 +39,7 @@ public abstract class SimpleMessageScanner<Cookie> {
      *  Negative value indicates that supplied buffer does not contain whole message (in which case result is the number of missing bytes).
      *  Positive value indicates that a single message is completely parsed (in which case result is offset of the first byte after the message).
      */
-    public int parse (byte [] buffer, int offset, int len, Cookie cookie) throws MessageFormatException {
+    public int parse(byte[] buffer, int offset, int len, Cookie cookie) throws MessageFormatException {
         if (len < MIN_MESSAGE_LENGTH)
             throw MessageFormatException.BUFFER_IS_TOO_SMALL;
 
@@ -69,7 +69,7 @@ public abstract class SimpleMessageScanner<Cookie> {
                     currentTagNum = 10*currentTagNum + parseDigit(b);
                 }
             } else {
-                if (b == SOH) {
+                if (b == AsciiUtils.SOH) {
                     if (currentTagValueStart > 0) {
                         if ( ! onTagValue(currentTagNum, buffer, currentTagValueStart, i - currentTagValueStart, cookie))
                             break;

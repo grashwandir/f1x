@@ -1,8 +1,6 @@
 package org.f1x.log.file;
 
 import org.f1x.api.session.SessionID;
-import org.gflogger.FormattedGFLogEntry;
-import org.gflogger.GFLog;
 import org.gflogger.GFLogEntry;
 
 public class LogUtils {
@@ -19,6 +17,13 @@ public class LogUtils {
         }
     }
 
-
+    public static void configure() {
+        try {
+//            org.gflogger.config.xml.XmlLogFactoryConfigurator.configure();
+            org.gflogger.config.xml.Configurator.configure();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
 
 }

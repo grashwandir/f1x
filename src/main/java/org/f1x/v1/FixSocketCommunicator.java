@@ -14,6 +14,7 @@
 
 package org.f1x.v1;
 
+import org.f1x.api.message.IMessageParser;
 import org.f1x.api.FixSettings;
 import org.f1x.api.FixVersion;
 import org.f1x.api.session.SessionStatus;
@@ -21,16 +22,23 @@ import org.f1x.io.InputChannel;
 import org.f1x.io.InputStreamChannel;
 import org.f1x.io.OutputChannel;
 import org.f1x.io.OutputStreamChannel;
+import org.f1x.api.message.MessageBuilder;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
+import org.f1x.api.session.FixSessionListener;
 
-public abstract class FixSocketCommunicator extends FixCommunicator {
-
+public abstract class FixSocketCommunicator<T extends FixSessionListener<IMessageParser, MessageBuilder>> extends FixCommunicator<IMessageParser, MessageBuilder, T> {
 
     public FixSocketCommunicator(FixVersion fixVersion, FixSettings settings) {
-        super(fixVersion, settings);
+        super(
+                new DefaultMessageParser(),
+                new DefaultMessageParser(),
+                new ByteBufferMessageBuilder(settings.getMaxOutboundMessageSize(), settings.getDoubleFormatterPrecision()),
+                new ByteBufferMessageBuilder(settings.getMaxOutboundMessageSize(), settings.getDoubleFormatterPrecision()),
+                fixVersion,
+                settings);
     }
 
     protected void connect (Socket socket) throws IOException {
@@ -39,7 +47,7 @@ public abstract class FixSocketCommunicator extends FixCommunicator {
             LOGGER.info().append("Connected to ").append(address).commit();
         }
 
-        FixSettings settings = getSettings();
+        final FixSettings settings = getSettings();
 
         socket.setTcpNoDelay(settings.isSocketTcpNoDelay());
         socket.setKeepAlive(settings.isSocketKeepAlive());
@@ -57,6 +65,12 @@ public abstract class FixSocketCommunicator extends FixCommunicator {
 
     protected OutputChannel getOutputChannel (Socket socket) throws IOException {
         return new OutputStreamChannel(socket.getOutputStream());
+    }
+
+    @Override
+    public MessageBuilder createMessageBuilder() {
+        final FixSettings settings = getSettings();
+        return new ByteBufferMessageBuilder(settings.getMaxOutboundMessageSize(), settings.getDoubleFormatterPrecision());
     }
 
 }

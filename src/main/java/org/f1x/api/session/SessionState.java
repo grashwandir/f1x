@@ -13,8 +13,6 @@
  */
 package org.f1x.api.session;
 
-import org.f1x.v1.InvalidFixMessageException;
-
 /**
  * Session state that requires persistence.
  */
@@ -22,13 +20,19 @@ public interface SessionState {
 
     void setNextSenderSeqNum(int newValue);
     int getNextSenderSeqNum();
-    /** "increment and get" for {@link #getNextSenderSeqNum() SenderSeqNum} */
+    /**
+     * "increment and get" for {@link #getNextSenderSeqNum() SenderSeqNum}
+     * @return
+     */
     int consumeNextSenderSeqNum();
 
 
     void setNextTargetSeqNum(int newValue);
     int getNextTargetSeqNum();
-    /** "increment and get" for {@link #getNextTargetSeqNum() TargetSeqNum} */
+    /**
+     * "increment and get" for {@link #getNextTargetSeqNum() TargetSeqNum}
+     * @return
+     */
     int consumeNextTargetSeqNum();
 
 

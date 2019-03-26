@@ -17,8 +17,6 @@ package org.f1x.v1;
 import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.FixTags;
 
-import java.io.IOException;
-
 class FixCommunicatorHelper {
 
     static void parseBeginString(MessageParser parser, byte [] beginString) throws InvalidFixMessageException {

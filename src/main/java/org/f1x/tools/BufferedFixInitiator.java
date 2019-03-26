@@ -16,6 +16,7 @@ package org.f1x.tools;
 
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.ExceptionHandler;
+
 import org.f1x.SessionIDBean;
 import org.f1x.api.FixInitiatorSettings;
 import org.f1x.api.FixVersion;
@@ -32,11 +33,12 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 /**
- * Extension of FixInitiator that uses ring buffer for asynchronous send.
+ * Extension of FixInitiator that uses ring buffer for asynchronous doSend.
  */
-public class BufferedFixInitiator extends FixSessionInitiator {
+public class BufferedFixInitiator extends FixSessionInitiator<InitiatorFixSessionListener> {
     private final Executor executor;
     private final ByteRing ring;
     private MessageProcessorPool processorPool;

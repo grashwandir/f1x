@@ -18,6 +18,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
+import org.f1x.api.session.AcceptorFixSessionListener;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -28,17 +29,17 @@ public class Test_SessionAcceptorWrapper extends TestCommon {
 
     private SessionAcceptorWrapper wrapper;
     private int onStopInvocationCount;
-    private SessionManager manager;
+    private SessionManager<AcceptorFixSessionListener> manager;
 
     // Mocks
-    private FixSessionAcceptor acceptor;
+    private FixSessionAcceptor<AcceptorFixSessionListener> acceptor;
     private Socket socket;
 
     @Before
     public void init() {
         onStopInvocationCount = 0;
         manager = new SimpleSessionManager();
-        acceptor = mock(FixSessionAcceptor.class);
+        acceptor = mock(MockFixSessionAcceptor.class);
         when(acceptor.getSettings()).thenReturn(new FixAcceptorSettings());
         wrapper = new SessionAcceptorWrapper(1024, 500, manager) {
 
@@ -123,7 +124,8 @@ public class Test_SessionAcceptorWrapper extends TestCommon {
 
     private void throwExceptionOnSocketRead(Class<? extends Throwable> exceptionClass) throws IOException {
         InputStream in = mock(InputStream.class);
-        when(in.read(any(byte[].class), anyInt(), anyInt())).thenThrow(exceptionClass);
+        when(in.read(any(byte[].class), anyInt(), anyInt()))
+                .thenThrow(exceptionClass);
         when(socket.getInputStream()).thenReturn(in);
     }
 

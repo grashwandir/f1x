@@ -3,20 +3,21 @@ package org.f1x.v1;
 import org.f1x.SessionIDBean;
 import org.f1x.api.FixVersion;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.fields.*;
 import org.f1x.api.session.SessionID;
 import org.f1x.io.OutputChannel;
-import org.f1x.util.AsciiUtils;
 import org.f1x.util.RealTimeSource;
-import org.junit.Ignore;
 import org.junit.Test;
-import quickfix.InvalidMessage;
 import quickfix.Message;
 import quickfix.field.MsgType;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Scanner;
+import org.f1x.api.message.fields.FixTags;
+import org.f1x.api.message.fields.HandlInst;
+import org.f1x.api.message.fields.OrdType;
+import org.f1x.api.message.fields.SecurityType;
+import org.f1x.api.message.fields.Side;
+import org.f1x.api.message.fields.TimeInForce;
 
 public class Test_EncodingNewOrderSingle {
 
@@ -37,7 +38,6 @@ public class Test_EncodingNewOrderSingle {
     private static final String SECURITY_DESCRIPTION = "AOZ3 C02000";
     private static final String TEXT = "NIGEL";
 
-    @Ignore
     @Test
     public void testF1XEncoding() throws IOException {
         MessageBuilder mb = new ByteBufferMessageBuilder(256, 2);
@@ -57,7 +57,6 @@ public class Test_EncodingNewOrderSingle {
         System.out.println("Average time " + (end - start) / N + " ns. per encoding, dummy result: " + out);
     }
 
-    @Ignore
     @Test
     public void testQuickFIXJEncoding() {
         Message msg = new Message();

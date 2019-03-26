@@ -14,6 +14,7 @@
 
 package org.f1x.v1;
 
+import org.f1x.api.session.AcceptorFixSessionListener;
 import org.f1x.api.session.SessionManager;
 import org.f1x.util.ObjectFactory;
 import org.f1x.util.ObjectPool;
@@ -33,16 +34,16 @@ public class MultiSessionAcceptor extends AbstractSessionAcceptor {
 
     private final ObjectPool<SessionAcceptorWrapper> acceptorPool;
     private final ExecutorService executor;
-    private final SessionManager manager;
+    private final SessionManager<AcceptorFixSessionListener> manager;
 
-    public MultiSessionAcceptor(String host, int port, int logonBufferSize, int logonTimeout, int maxActiveSessions, SessionManager manager) {
+    public MultiSessionAcceptor(String host, int port, int logonBufferSize, int logonTimeout, int maxActiveSessions, SessionManager<AcceptorFixSessionListener> manager) {
         this(host, port, logonBufferSize, logonTimeout, maxActiveSessions, manager, createThreadPool(maxActiveSessions));
     }
 
     /**
      * @param logonTimeout in milliseconds
      */
-    public MultiSessionAcceptor(String host, int port, int logonBufferSize, int logonTimeout, int maxActiveSessions, SessionManager manager, ExecutorService executor) {
+    public MultiSessionAcceptor(String host, int port, int logonBufferSize, int logonTimeout, int maxActiveSessions, SessionManager<AcceptorFixSessionListener> manager, ExecutorService executor) {
         super(host, port, maxActiveSessions);
         check(logonTimeout, manager, executor);
         this.acceptorPool = createAcceptorPool(logonBufferSize, logonTimeout, maxActiveSessions, manager);
@@ -50,7 +51,7 @@ public class MultiSessionAcceptor extends AbstractSessionAcceptor {
         this.manager = manager;
     }
 
-    public SessionManager getSessionManager() {
+    public SessionManager<AcceptorFixSessionListener> getSessionManager() {
         return manager;
     }
 
@@ -73,7 +74,7 @@ public class MultiSessionAcceptor extends AbstractSessionAcceptor {
         executor.shutdown();
     }
 
-    protected ObjectPool<SessionAcceptorWrapper> createAcceptorPool(final int logonBufferSize, final int logonTimeout, int maxActiveSessions, final SessionManager manager) {
+    protected ObjectPool<SessionAcceptorWrapper> createAcceptorPool(final int logonBufferSize, final int logonTimeout, int maxActiveSessions, final SessionManager<AcceptorFixSessionListener> manager) {
         return new ObjectPool<>(maxActiveSessions, new ObjectFactory<SessionAcceptorWrapper>() {
             @Override
             public SessionAcceptorWrapper create() {
@@ -89,7 +90,7 @@ public class MultiSessionAcceptor extends AbstractSessionAcceptor {
         });
     }
 
-    protected static void check(int logonTimeout, SessionManager manager, ExecutorService executor) {
+    protected static void check(int logonTimeout, SessionManager<AcceptorFixSessionListener> manager, ExecutorService executor) {
         if (logonTimeout < 1)
             throw new IllegalArgumentException("logonTimeout < 1");
 

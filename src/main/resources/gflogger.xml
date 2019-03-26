@@ -14,18 +14,24 @@
 
 <!-- Default Logging configuration -->
 <configuration
-        xmlns="http://bitbucket.org/vladimir.dolzhenko/gflogger"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="
-		http://bitbucket.org/vladimir.dolzhenko/gflogger
-		https://bitbucket.org/vladimir.dolzhenko/gflogger/raw/0.1.0/src/gflogger.xsd">
+    xmlns="https://github.com/vladimirdolzhenko/gflogger"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://github.com/vladimirdolzhenko/gflogger https://github.com/vladimirdolzhenko/gflogger/blob/master/core/src/main/resources/gflogger.xsd">
 
     <appender name="consoleAppender"
               class="org.gflogger.appender.ConsoleAppenderFactory"
-              datePattern="'.'yyyy-MM-dd-HH">
-        <layout class="org.gflogger.PatternLayout" pattern="%d{HH:mm:ss,SSS} %p - %m %n"/>
+              immediateFlush="true">
+        <!--<layout class="org.gflogger.PatternLayout" pattern="%d{HH:mm:ss,SSS} %p - %m %n"/>-->
+        <!--<layout class="org.gflogger.PatternLayout" pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS} %c{1}] %-7p %m%n" language="US"/>-->
+        <layout class="org.gflogger.PatternLayout" pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS} %-7p &#x09; ] %m%n" language="US"/>
+        <!--<layout class="org.gflogger.PatternLayout" pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS} %-7p ] %m%n" language="US"/>-->
     </appender>
-<!--
+
+    <!--
+    <appender name="safeAppender" class="org.gflogger.appender.SafeAppenderFactory">
+        <appender-ref ref="fileAppender"/>
+        <appender-ref ref="consoleAppender"/>
+    </appender>
 
     <appender name="fileAppender"
               class="org.gflogger.appender.DailyRollingFileAppenderFactory"
@@ -34,8 +40,13 @@
         <layout class="org.gflogger.PatternLayout"
                 pattern="%d{MMM d HH:mm:ss,SSS zzz} %p - %m [%c{2}] [%t]%n" timeZoneId="GMT"/>
     </appender>
--->
-    <logger name="org.f1x" logLevel="INFO">
+    -->
+
+    <logger name="org.f1x.log.GFLoggerMessageLog" logLevel="TRACE">
+        <appender-ref ref="consoleAppender"/>
+    </logger>
+
+    <logger name="org.f1x" logLevel="TRACE">
         <appender-ref ref="consoleAppender"/>
     </logger>
 
@@ -43,9 +54,7 @@
         <appender-ref ref="consoleAppender"/>
     </root>
     <service count="1024" maxMessageSize="4096">
-    <!--
-      <object-formatter class="org.gflogger.perftest.SomeObject" formatter="org.gflogger.perftest.SomeObjectFormatter"/>
-    -->
+        <!--<object-formatter class="org.gflogger.perftest.SomeObject" formatter="org.gflogger.perftest.SomeObjectFormatter"/>-->
     </service>
 
 </configuration>

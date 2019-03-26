@@ -16,7 +16,6 @@ package org.f1x.alloc;
 import com.google.monitoring.runtime.instrumentation.AllocationRecorder;
 import com.google.monitoring.runtime.instrumentation.Sampler;
 import org.f1x.SessionIDBean;
-import org.f1x.api.session.SessionEventListener;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionStatus;
 import org.f1x.tools.SimpleFixAcceptor;
@@ -25,13 +24,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.f1x.api.session.InitiatorFixSessionAdaptor;
 
 /**
  * This test verifies that there are no allocations in during session.
@@ -71,13 +70,14 @@ public class NoAllocationsTest /*extends TestCommon */{
     public void simpleMessageLoop() throws InterruptedException, IOException {
 
         final CountDownLatch connected = new CountDownLatch(1);
-        final SessionEventListener eventListener = new SessionEventListener() {
+        final InitiatorFixSessionAdaptor eventListener = new InitiatorFixSessionAdaptor() {
 
             @Override
             public void onStatusChanged(SessionID sessionID, SessionStatus oldStatus, SessionStatus newStatus) {
                 if (newStatus == SessionStatus.ApplicationConnected)
                     connected.countDown();
             }
+
         };
 
         final SimpleFixAcceptor acceptor = createAcceptor(7890);
@@ -124,7 +124,7 @@ public class NoAllocationsTest /*extends TestCommon */{
 
     private static class AllocationDetector implements Sampler {
         boolean isTestObjectAllocatonsDetected = false;
-        final List<Class> allocs = Collections.synchronizedList(new ArrayList<Class>(10000));
+        final List<Class<?>> allocs = Collections.synchronizedList(new ArrayList<Class<?>>(10000));
         volatile boolean enabled;
 
         static AllocationDetector create () {
@@ -137,7 +137,7 @@ public class NoAllocationsTest /*extends TestCommon */{
         public void sampleAllocation(int count, String desc, Object newObj, long size) {
             //System.out.println("I just allocated the object " + newObj + " of type " + desc + " whose size is " + size);
             if (enabled) {
-                Class allocatedClass = newObj.getClass();
+                Class<?> allocatedClass = newObj.getClass();
                 if (allocatedClass == TestObject.class)
                     isTestObjectAllocatonsDetected = true;
                 else

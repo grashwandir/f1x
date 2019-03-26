@@ -19,16 +19,17 @@ import org.f1x.api.FixVersion;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionStatus;
 import org.f1x.v1.schedule.SessionTimes;
-import org.gflogger.GFLog;
-import org.gflogger.GFLogFactory;
+import org.f1x.api.session.AcceptorFixSessionListener;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.f1x.api.message.MessageBuilder;
 
 /**
  * FIX Communicator that plays FIX Accepts role for inbound FIX connections
+ * @param <T>
  */
-public class FixSessionAcceptor extends FixSocketCommunicator {
-    protected static final GFLog LOGGER = GFLogFactory.getLog(FixSessionAcceptor.class);
+public class FixSessionAcceptor<T extends AcceptorFixSessionListener> extends FixSocketCommunicator<T> {
+//    protected static final GFLog LOGGER = GFLogFactory.getLog(FixSessionAcceptor.class);
     private final SessionID sessionID;
     private final AtomicBoolean running = new AtomicBoolean();
 
@@ -133,6 +134,10 @@ public class FixSessionAcceptor extends FixSocketCommunicator {
             throw new NullPointerException("logonBuffer == null");
         if (length < 0 || logonBuffer.length < length)
             throw new IllegalArgumentException("length < 0 || logonBuffer.length < length");
+    }
+
+    @Override
+    protected void beforeLogonSent(MessageBuilder messageBuilder) {
     }
 
 }

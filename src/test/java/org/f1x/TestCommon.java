@@ -11,18 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.f1x;
 
-
-import org.gflogger.config.xml.XmlLogFactoryConfigurator;
+import org.f1x.log.file.LogUtils;
 
 public class TestCommon {
+
     static {
-        try {
-            XmlLogFactoryConfigurator.configure ();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        LogUtils.configure();
     }
 }

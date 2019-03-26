@@ -40,8 +40,6 @@ import java.io.IOException;
  */
 final class RawMessageAssembler {
 
-    private final static byte SOH = 1;
-
     private final TimestampFormatter timestampFormatter = TimestampFormatter.createUTCTimestampFormatter();  //TODO Reuse instance kept by MessageBuilder?
     private final byte [] BEGIN_STRING;
     private final boolean isSendRequiresConnect;
@@ -50,7 +48,7 @@ final class RawMessageAssembler {
     RawMessageAssembler(FixVersion version, int maxMessageSize, boolean sendRequiresConnect) {
         buffer = new byte[maxMessageSize];
         isSendRequiresConnect = sendRequiresConnect;
-        BEGIN_STRING = AsciiUtils.getBytes("" + FixTags.BeginString + '=' + version.getBeginString() + (char) SOH);
+        BEGIN_STRING = AsciiUtils.getBytes("" + FixTags.BeginString + '=' + version.getBeginString() + (char) AsciiUtils.SOH);
         System.arraycopy(BEGIN_STRING, 0, buffer, 0, BEGIN_STRING.length);
     }
 
@@ -112,7 +110,7 @@ final class RawMessageAssembler {
         for (int i=0; i < value.length(); i++)
             buffer[offset++] = (byte)value.charAt(i);
 
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
         return offset;
     }
 
@@ -120,7 +118,7 @@ final class RawMessageAssembler {
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = IntFormatter.format(value, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
         return offset;
     }
 
@@ -128,7 +126,7 @@ final class RawMessageAssembler {
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = IntFormatter.format3digits(value, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
         return offset;
     }
 
@@ -136,7 +134,7 @@ final class RawMessageAssembler {
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = timestampFormatter.formatDateTime(value, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
         return offset;
     }
 

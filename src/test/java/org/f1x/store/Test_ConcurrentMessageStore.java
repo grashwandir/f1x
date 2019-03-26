@@ -21,7 +21,6 @@ import org.f1x.api.FixAcceptorSettings;
 import org.f1x.api.FixInitiatorSettings;
 import org.f1x.api.FixVersion;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.*;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionStatus;
@@ -33,6 +32,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.session.AcceptorFixSessionListener;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 public class Test_ConcurrentMessageStore extends TestCommon {
     private static final int NUM_CLIENT_THREADS = 16;
@@ -49,8 +51,11 @@ public class Test_ConcurrentMessageStore extends TestCommon {
 
     /**
      * This test uses simple FIX client and FIX server that have in-memory message store.
-     * Test uses NUM_CLIENT_THREADS threads to send messages to server concurrently.
-     * At the end we validate that message stores on client and server match (server stores inbound messages into aux msg store).
+     * Test uses NUM_CLIENT_THREADS threads to doSend messages to
+     * server concurrently. At the end we validate that message stores on client
+     * and server match (server stores inbound messages into aux msg store).
+     * @throws java.lang.InterruptedException
+     * @throws java.io.IOException
      */
     @Test(timeout = 120000)
     public void concurrentSend() throws InterruptedException, IOException {
@@ -99,15 +104,13 @@ public class Test_ConcurrentMessageStore extends TestCommon {
 
         public TestServer(int bindPort, SessionID sessionID, final MessageStore testMessageStore) {
             super (null, bindPort,
-                new FixSessionAcceptor(FixVersion.FIX44, sessionID, new FixAcceptorSettings()) {
-                    private MessageBuilder messageBuilder; {
-                        messageBuilder = createMessageBuilder();
-                    }
+                    new FixSessionAcceptor<AcceptorFixSessionListener>(FixVersion.FIX44, sessionID, new FixAcceptorSettings()) {
+                        private final MessageBuilder messageBuilder = createMessageBuilder();
 
                     private final byte [] buffer = new byte[MAX_MESSAGE_SIZE];
 
                     @Override
-                    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+                    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, IMessageParser parser) throws IOException {
 
                         messageBuilder.clear();
 
@@ -123,7 +126,7 @@ public class Test_ConcurrentMessageStore extends TestCommon {
         }
     }
 
-    private static class TestClient extends FixSessionInitiator {
+    private static class TestClient extends FixSessionInitiator<InitiatorFixSessionListener> {
         private final ClientSendingThread [] clientThreads = new ClientSendingThread [NUM_CLIENT_THREADS];
         private final CountDownLatch activeClientThreads = new CountDownLatch(NUM_CLIENT_THREADS);
 

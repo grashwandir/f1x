@@ -11,11 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.f1x.log;
 
 import org.f1x.util.ByteArrayReference;
-import org.f1x.util.MutableByteSequence;
 import org.gflogger.GFLog;
 import org.gflogger.GFLogFactory;
 
@@ -25,25 +23,41 @@ import java.io.IOException;
  * Stores FIX messages into GF Logger
  */
 public class GFLoggerMessageLog implements MessageLog {
-    private static final GFLog LOGGER = GFLogFactory.getLog(GFLoggerMessageLog.class);
 
+    private static final GFLog LOGGER = GFLogFactory.getLog(GFLoggerMessageLog.class);
     //TODO: Ask gflogger dev to add GFLog.append(byte[], offset, length) to avoid this
     private final ThreadLocal<ByteArrayReference> byteSequences = new ThreadLocal<>();
 
+    private final LogFormatter formatter;
+
     public GFLoggerMessageLog() {
+        this(null);
+    }
+
+    public GFLoggerMessageLog(LogFormatter formatter) {
+        this.formatter = formatter;
     }
 
     @Override
     public void log(boolean isInbound, byte[] buffer, int offset, int length) {
-
-        ByteArrayReference byteSequence = byteSequences.get();
-        if (byteSequence == null) {
-            byteSequence = new ByteArrayReference();
-            byteSequences.set(byteSequence);
+        if (LOGGER.isInfoEnabled()) {
+            ByteArrayReference byteSequence = byteSequences.get();
+            if (byteSequence == null) {
+                byteSequence = new ByteArrayReference(0);
+                byteSequences.set(byteSequence);
+            }
+            if (formatter != null) {
+                try {
+                    formatter.log(isInbound, buffer, offset, length, byteSequence);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            } else {
+                byteSequence.set(buffer, offset, length);
+            }
+            LOGGER.info().append(byteSequence).commit();
+            // LOGGER.info(byteSequence.toString());
         }
-        byteSequence.set(buffer, offset, length);
-
-        LOGGER.info().append((CharSequence) byteSequence).commit();
     }
 
     @Override

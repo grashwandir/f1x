@@ -1,6 +1,9 @@
 package org.f1x.v1;
 
 import org.f1x.SessionIDBean;
+import org.f1x.api.FixAcceptorSettings;
+import org.f1x.api.FixVersion;
+import org.f1x.api.session.AcceptorFixSessionListener;
 import org.f1x.api.session.FailedLockException;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionManager;
@@ -12,7 +15,7 @@ import org.mockito.Mockito;
 
 public class Test_SimpleSessionManager {
 
-    private SessionManager manager;
+    private SessionManager<AcceptorFixSessionListener> manager;
 
     @Before
     public void init() {
@@ -44,10 +47,10 @@ public class Test_SimpleSessionManager {
     }
 
     private void assertSuccessfulLock(SessionID sessionID) {
-        FixSessionAcceptor expectedAcceptor = createTestSessionAcceptor(sessionID);
+        FixSessionAcceptor<AcceptorFixSessionListener> expectedAcceptor = createTestSessionAcceptor(sessionID);
         manager.addSession(expectedAcceptor);
 
-        FixSessionAcceptor actualAcceptor = null;
+        FixSessionAcceptor<AcceptorFixSessionListener> actualAcceptor = null;
         try {
             actualAcceptor = manager.lockSession(sessionID);
         } catch (FailedLockException e) {
@@ -69,10 +72,11 @@ public class Test_SimpleSessionManager {
         return Mockito.mock(SessionState.class);
     }
 
-    private static FixSessionAcceptor createTestSessionAcceptor(SessionID sessionID) {
-        FixSessionAcceptor acceptor = Mockito.mock(FixSessionAcceptor.class);
+    private static FixSessionAcceptor<AcceptorFixSessionListener> createTestSessionAcceptor(SessionID sessionID) {
+        FixSessionAcceptor<AcceptorFixSessionListener> acceptor = Mockito.mock(MockFixSessionAcceptor.class);
         Mockito.when(acceptor.getSessionID()).thenReturn(sessionID);
         return acceptor;
     }
+
 
 }

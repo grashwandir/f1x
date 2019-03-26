@@ -32,6 +32,7 @@ public class Test_ByteEnumLookup {
         Color(char code) {
             this.code  = (byte) code;
         }
+        @Override
         public byte getCode() { return code; }
     }
 
@@ -50,7 +51,7 @@ public class Test_ByteEnumLookup {
         assertIllegalArgument(decoder, (byte) 0xFF);
     }
 
-    private static void assertIllegalArgument(ByteEnumLookup decoder, byte arg) {
+    private static void assertIllegalArgument(ByteEnumLookup<?> decoder, byte arg) {
         try {
             decoder.get(arg);
             fail ("Failed to detect invalid argument: (byte) 0x" + Integer.toHexString(arg));
@@ -67,6 +68,7 @@ public class Test_ByteEnumLookup {
         Duplicate(char code) {
             this.code  = (byte) code;
         }
+        @Override
         public byte getCode() { return code; }
     }
 

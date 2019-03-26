@@ -13,6 +13,7 @@
  */
 package org.f1x.v1;
 
+import org.f1x.api.session.AcceptorFixSessionListener;
 import org.f1x.api.session.FailedLockException;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionManager;
@@ -22,30 +23,30 @@ import java.util.*;
 /**
  * Thread safe.
  */
-public class SimpleSessionManager implements SessionManager {
+public class SimpleSessionManager implements SessionManager<AcceptorFixSessionListener> {
 
     protected final Set<SessionID> lockedSessions = new HashSet<>();
 
-    protected volatile Map<SessionID, FixSessionAcceptor> sessions = Collections.emptyMap();
+    protected volatile Map<SessionID, FixSessionAcceptor<AcceptorFixSessionListener>> sessions = Collections.emptyMap();
     protected boolean active = true;
 
     @Override
-    public synchronized void addSession(FixSessionAcceptor acceptor) {
+    public synchronized void addSession(FixSessionAcceptor<AcceptorFixSessionListener> acceptor) {
         SessionID sessionID = acceptor.getSessionID();
         if (sessions.containsKey(sessionID))
             throw new IllegalArgumentException("Session with such session id already exists: " + sessionID);
 
-        Map<SessionID, FixSessionAcceptor> newSessions = copySessions();
+        Map<SessionID, FixSessionAcceptor<AcceptorFixSessionListener>> newSessions = copySessions();
         newSessions.put(sessionID, acceptor);
 
         this.sessions = newSessions;
     }
 
     @Override
-    public synchronized FixSessionAcceptor removeSession(SessionID sessionID) {
-        FixSessionAcceptor acceptor = null;
+    public synchronized FixSessionAcceptor<AcceptorFixSessionListener> removeSession(SessionID sessionID) {
+        FixSessionAcceptor<AcceptorFixSessionListener> acceptor = null;
         if (sessions.containsKey(sessionID)) {
-            Map<SessionID, FixSessionAcceptor> newSessions = copySessions();
+            Map<SessionID, FixSessionAcceptor<AcceptorFixSessionListener>> newSessions = copySessions();
             acceptor = newSessions.remove(sessionID);
             acceptor.close();
             this.sessions = newSessions;
@@ -55,15 +56,15 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     @Override
-    public FixSessionAcceptor getSession(SessionID sessionID) {
+    public FixSessionAcceptor<AcceptorFixSessionListener> getSession(SessionID sessionID) {
         return sessions.get(sessionID);
     }
 
     @Override
-    public synchronized FixSessionAcceptor lockSession(SessionID sessionID) throws FailedLockException {
+    public synchronized FixSessionAcceptor<AcceptorFixSessionListener> lockSession(SessionID sessionID) throws FailedLockException {
         checkActive();
 
-        FixSessionAcceptor acceptor = sessions.get(sessionID);
+        FixSessionAcceptor<AcceptorFixSessionListener> acceptor = sessions.get(sessionID);
         if (acceptor == null)
             throw FailedLockException.UNREGISTERED_SESSION_ID;
 
@@ -76,7 +77,7 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     @Override
-    public synchronized FixSessionAcceptor unlockSession(SessionID sessionID) {
+    public synchronized FixSessionAcceptor<AcceptorFixSessionListener> unlockSession(SessionID sessionID) {
         lockedSessions.remove(sessionID);
         return getSession(sessionID);
     }
@@ -86,15 +87,16 @@ public class SimpleSessionManager implements SessionManager {
         if (active) {
             active = false;
 
-            for (FixSessionAcceptor acceptor : sessions.values())
-                acceptor.close();
+            for (Map.Entry<SessionID, FixSessionAcceptor<AcceptorFixSessionListener>> entry : sessions.entrySet()) {
+                entry.getValue().close();
+            }
 
             sessions = Collections.emptyMap();
             lockedSessions.clear();
         }
     }
 
-    protected HashMap<SessionID, FixSessionAcceptor> copySessions() {
+    protected HashMap<SessionID, FixSessionAcceptor<AcceptorFixSessionListener>> copySessions() {
         return new HashMap<>(this.sessions);
     }
 

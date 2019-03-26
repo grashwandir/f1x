@@ -11,22 +11,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.f1x.util;
 
 import java.nio.charset.StandardCharsets;
 
 public class AsciiUtils {
 
+    public static final byte NULL = (byte) 0; // NULL
+    public static final byte SOH = (byte) 1; // FIX field separator
+    public static final byte NL = (byte) 10; // New line
+    public static final byte PIPE = (byte) 124; // PIPE
+
     public static byte[] getBytes(String asciiText) {
         return asciiText.getBytes(StandardCharsets.US_ASCII);
     }
 
     public static boolean equals(byte[] array1, byte[] array2, int offset2, int length) {
-        for (int i=0; i < length; i++)
-            if (array1[i] != array2[i+offset2])
+        for (int i = 0; i < length; i++) {
+            if (array1[i] != array2[i + offset2]) {
                 return false;
-
+            }
+        }
         return true;
     }
 

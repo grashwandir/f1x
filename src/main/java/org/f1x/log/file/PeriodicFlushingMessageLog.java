@@ -39,6 +39,7 @@ public class PeriodicFlushingMessageLog extends OutputStreamMessageLog {
 
     /**
      * @param os destination stream
+     * @param formatter
      */
     public PeriodicFlushingMessageLog(OutputStream os, LogFormatter formatter) {
         super(os, formatter);

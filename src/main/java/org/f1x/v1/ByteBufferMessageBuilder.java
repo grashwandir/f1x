@@ -21,6 +21,7 @@ import org.f1x.api.message.fields.MsgType;
 import org.f1x.api.message.types.ByteEnum;
 import org.f1x.api.message.types.IntEnum;
 import org.f1x.api.message.types.StringEnum;
+import org.f1x.util.AsciiUtils;
 import org.f1x.util.ByteArrayReference;
 import org.f1x.util.format.*;
 
@@ -31,7 +32,6 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
 
     private static final byte BYTE_Y = (byte) 'Y';
     private static final byte BYTE_N = (byte) 'N';
-    private static final byte SOH = 1; // field separator
     public static final String NULL = "null";
 
     private final TimestampFormatter gmtTimestampFormat = TimestampFormatter.createUTCTimestampFormatter();
@@ -81,7 +81,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = CharSequenceFormatter.format(value, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -91,7 +91,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = CharSequenceFormatter.format(value, start, end, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -99,7 +99,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = LongFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = LongFormatter.format(value, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -107,7 +107,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = IntFormatter.format(value, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -115,7 +115,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = doubleFormatter.format(value, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -123,7 +123,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = doubleFormatter.format(value, precision, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -131,7 +131,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = doubleFormatter.format(value, precision, roundUp, DoubleFormatter.MAX_WIDTH, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -139,7 +139,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         buffer[offset++] = value;
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -147,7 +147,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         buffer[offset++] = (value) ? BYTE_Y : BYTE_N;
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -155,7 +155,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = gmtTimestampFormat.formatDateTime(timestamp, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -163,7 +163,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = gmtTimestampFormat.formatDateOnly(timestamp, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -171,7 +171,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = localTimestampFormat.formatDateOnly(timestamp, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -182,7 +182,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         int mmdd = yyyymmdd % 10000;
         offset = IntFormatter.format2digits(mmdd / 100, buffer, offset); // month
         offset = IntFormatter.format2digits(mmdd % 100, buffer, offset); // day
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -190,7 +190,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = TimeOfDayFormatter.format(timestamp, buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -201,7 +201,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         buffer[offset++] = '=';
         System.arraycopy(sourceBuffer, sourceOffset, buffer, offset, sourceLength);
         offset += sourceLength;
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -211,7 +211,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset += bytes.copyTo(buffer, offset);
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     @Override
@@ -308,7 +308,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
 
     @Override
     public void end() {
-        buffer[offset++] = SOH;
+        buffer[offset++] = AsciiUtils.SOH;
     }
 
     private static void checkValue(int tagNo, CharSequence value) {

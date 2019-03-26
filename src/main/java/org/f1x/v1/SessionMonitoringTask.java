@@ -1,20 +1,24 @@
 package org.f1x.v1;
 
 import org.f1x.api.session.SessionStatus;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.message.MessageBuilder;
+
 import org.gflogger.GFLog;
 import org.gflogger.GFLogFactory;
 
 import java.util.TimerTask;
+import org.f1x.api.session.FixSessionListener;
 
 /** Timer responsible for sending HEARTBEATs from our side, and TEST request of we do not receive HEARTBEATs from other side */
-final class SessionMonitoringTask extends TimerTask {
+class SessionMonitoringTask<M extends IMessageParser, B extends MessageBuilder> extends TimerTask {
 
     private static final GFLog LOGGER = GFLogFactory.getLog(SessionMonitoringTask.class);
 
-    private final FixCommunicator communicator;
+    private final FixCommunicator<? extends M, ? extends B, ? extends FixSessionListener<? extends M, ? extends B>> communicator;
     private final int heartbeatInterval;
 
-    public SessionMonitoringTask(FixCommunicator communicator) {
+    public SessionMonitoringTask(FixCommunicator<? extends M, ? extends B, ? extends FixSessionListener<? extends M, ? extends B>> communicator) {
         this.communicator = communicator;
         heartbeatInterval = communicator.getSettings().getHeartBeatIntervalSec() * 1000;
     }
@@ -29,7 +33,7 @@ final class SessionMonitoringTask extends TimerTask {
             checkOutbound(currentTime);
     }
 
-    /** Check when we received last message from other side (send TEST if that happen long time ago) */
+    /** Check when we received last message from other side (doSend TEST if that happen long time ago) */
     private void checkInbound(long currentTime) {
         long lastReceivedMessageTimestamp = communicator.getSessionState().getLastReceivedMessageTimestamp();
         if (lastReceivedMessageTimestamp < currentTime - heartbeatInterval) {
@@ -43,7 +47,7 @@ final class SessionMonitoringTask extends TimerTask {
         }
     }
 
-    /** Check when we sent last message to other side (send HEARTBEAT if that happened long time ago) */
+    /** Check when we sent last message to other side (doSend HEARTBEAT if that happened long time ago) */
     private void checkOutbound(long currentTime) {
         long lastSentMessageTimestamp = communicator.getSessionState().getLastSentMessageTimestamp();
         if (lastSentMessageTimestamp < currentTime - heartbeatInterval) {

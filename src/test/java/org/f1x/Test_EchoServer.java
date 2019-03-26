@@ -17,7 +17,6 @@ import org.f1x.api.FixAcceptorSettings;
 import org.f1x.api.FixInitiatorSettings;
 import org.f1x.api.FixVersion;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.Tools;
 import org.f1x.api.message.fields.*;
 import org.f1x.api.session.FixSession;
@@ -31,6 +30,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 /** Verifies that simple FIX server and client can exchange messages */
 public class Test_EchoServer extends  TestCommon {
@@ -65,7 +66,7 @@ public class Test_EchoServer extends  TestCommon {
     public void loginAfterDisconnect() throws InterruptedException, IOException {
 
         final EchoServer server = new EchoServer(7890, new SessionIDBean(ACCEPTOR_SENDER_ID, INITIATOR_SENDER_ID), new FixAcceptorSettings());
-        final FixSessionInitiator client = new FixSessionInitiator ("localhost", 7890, FixVersion.FIX44, new SessionIDBean(INITIATOR_SENDER_ID, ACCEPTOR_SENDER_ID), new FixInitiatorSettings());
+        final FixSessionInitiator<InitiatorFixSessionListener> client = new FixSessionInitiator<>("localhost", 7890, FixVersion.FIX44, new SessionIDBean(INITIATOR_SENDER_ID, ACCEPTOR_SENDER_ID), new FixInitiatorSettings());
 
 
         final Thread acceptorThread = new Thread(server, "Server");
@@ -97,7 +98,7 @@ public class Test_EchoServer extends  TestCommon {
     public void repeatedDisconnect() throws InterruptedException, IOException {
 
         final EchoServer server = new EchoServer(7890, new SessionIDBean(ACCEPTOR_SENDER_ID, INITIATOR_SENDER_ID), new FixAcceptorSettings());
-        final FixSessionInitiator client = new FixSessionInitiator ("localhost", 7890, FixVersion.FIX44, new SessionIDBean(INITIATOR_SENDER_ID, ACCEPTOR_SENDER_ID), new FixInitiatorSettings());
+        final FixSessionInitiator<InitiatorFixSessionListener> client = new FixSessionInitiator<>("localhost", 7890, FixVersion.FIX44, new SessionIDBean(INITIATOR_SENDER_ID, ACCEPTOR_SENDER_ID), new FixInitiatorSettings());
 
 
         final Thread acceptorThread = new Thread(server, "Server");
@@ -127,7 +128,7 @@ public class Test_EchoServer extends  TestCommon {
 
     //TODO: Test Scheduled disconnect
 
-    private boolean spinWaitSessionStatus(FixSession session, SessionStatus expectedStatus, long timeout) throws InterruptedException {
+    private boolean spinWaitSessionStatus(FixSession<?, ?, ?> session, SessionStatus expectedStatus, long timeout) throws InterruptedException {
         final long timeoutTime = System.currentTimeMillis() + timeout;
         while (true) {
             if (session.getSessionStatus() == expectedStatus)
@@ -154,7 +155,7 @@ public class Test_EchoServer extends  TestCommon {
 
 
 
-    private static class EchoServerClient extends FixSessionInitiator {
+    private static class EchoServerClient extends FixSessionInitiator<InitiatorFixSessionListener> {
         private final CountDownLatch messageCount;
         private final MessageBuilder mb;
         private final Object disconnectedSignal = new Object();
@@ -183,7 +184,7 @@ public class Test_EchoServer extends  TestCommon {
                 mb.add(76, "MARKET-FEED-SIM");
                 mb.add(FixTags.ExDestination, "#CANCEL-AFTER-OPEN");
                 mb.addUTCTimestamp(FixTags.TransactTime, System.currentTimeMillis());
-                send(mb);
+                doSend(mb);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -215,7 +216,7 @@ public class Test_EchoServer extends  TestCommon {
         }
 
         @Override
-        protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+        protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, final IMessageParser parser) throws IOException {
             if (Tools.equals(MsgType.ORDER_SINGLE, msgType)) {
                 messageCount.countDown();
             } else {

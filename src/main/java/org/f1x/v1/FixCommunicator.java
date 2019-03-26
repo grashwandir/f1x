@@ -17,13 +17,16 @@ package org.f1x.v1;
 import org.f1x.api.FixParserException;
 import org.f1x.api.FixSettings;
 import org.f1x.api.FixVersion;
+import org.f1x.api.message.IMessageParser;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.EncryptMethod;
 import org.f1x.api.message.fields.FixTags;
 import org.f1x.api.message.fields.MsgType;
 import org.f1x.api.message.fields.SessionRejectReason;
-import org.f1x.api.session.*;
+import org.f1x.api.session.FixSession;
+import org.f1x.api.session.SessionID;
+import org.f1x.api.session.SessionState;
+import org.f1x.api.session.SessionStatus;
 import org.f1x.io.InputChannel;
 import org.f1x.io.LoggingOutputChannel;
 import org.f1x.io.OutputChannel;
@@ -40,6 +43,7 @@ import org.f1x.util.TimeSource;
 import org.f1x.util.timer.GlobalTimer;
 import org.f1x.v1.schedule.SessionSchedule;
 import org.f1x.v1.state.MemorySessionState;
+
 import org.gflogger.GFLog;
 import org.gflogger.GFLogEntry;
 import org.gflogger.GFLogFactory;
@@ -49,18 +53,22 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicReference;
+import org.f1x.api.session.FixSessionListener;
 
 /**
  * Common networking code for FIX Acceptor and FIX Initiator
+ * @param <M>
+ * @param <B>
+ * @param <T>
  */
-public abstract class FixCommunicator implements FixSession, Loggable {
+public abstract class FixCommunicator<M extends IMessageParser, B extends MessageBuilder, T extends FixSessionListener<M, B>> implements FixSession<M, B, T>, Loggable {
+
     private static final int MIN_FIX_MESSAGE_LENGTH = 63; // min message example: 8=FIX.4.?|9=??|35=?|34=?|49=?|56=?|52=YYYYMMDD-HH:MM:SS|10=???|
     static final int CHECKSUM_LENGTH = 7; // length("10=123|") --check sum always expressed using 3 digits
 
-
     protected static final GFLog LOGGER = GFLogFactory.getLog(FixCommunicator.class);
 
-    private SessionEventListener eventListener;
+    protected T eventListener;
 
     private final FixSettings settings;
     private MessageLogFactory messageLogFactory;
@@ -75,12 +83,12 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     protected SessionSchedule schedule;
 
     // used by receiver thread only
-    private final DefaultMessageParser parserForResend = new DefaultMessageParser();
+    private final M parserForResend;
     private final ByteArrayReference msgTypeForResend = new ByteArrayReference();
     private final byte[] messageBufferForResend;
-    private final MessageBuilder messageBuilderForResend;
+    private final B messageBuilderForResend;
 
-    private AtomicReference<SessionStatus> status = new AtomicReference<>(SessionStatus.Disconnected);
+    private final AtomicReference<SessionStatus> status = new AtomicReference<>(SessionStatus.Disconnected);
 
     /** This flag is set when communicator is going though graceful disconnect initiated by this side.
      * We continue to process inbound requests but do not make new attempts to establish socket connections.
@@ -89,7 +97,8 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     protected volatile boolean closeInProgress = false;
 
     // used by receiver thread only
-    private final DefaultMessageParser parser = new DefaultMessageParser();
+//    private final DefaultM parser = new DefaultM();
+    private final M parser;
     private final byte [] inboundMessageBuffer;
     private final ByteArrayReference msgType = new ByteArrayReference();
     private final byte [] beginString;
@@ -98,7 +107,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     private final ByteArrayReference temporaryByteArrayReference = new ByteArrayReference();
 
     // Used by senders
-    private final MessageBuilder sessionMessageBuilder;
+    private final B sessionMessageBuilder;
     private final RawMessageAssembler messageAssembler;
 
     protected final TimeSource timeSource;
@@ -108,11 +117,11 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     private final Object sendLock = new Object();
 
 
-    public FixCommunicator (FixVersion fixVersion, FixSettings settings) {
-        this(fixVersion, settings, RealTimeSource.INSTANCE);
+    protected FixCommunicator(M parser, M parserForResend, B sessionMessageBuilder, B messageBuilderForResend, FixVersion fixVersion, FixSettings settings) {
+        this(parser, parserForResend, sessionMessageBuilder, messageBuilderForResend, fixVersion, settings, RealTimeSource.INSTANCE);
     }
 
-    protected FixCommunicator (FixVersion fixVersion, FixSettings settings, TimeSource timeSource) {
+    protected FixCommunicator(M parser, M parserForResend, B sessionMessageBuilder, B messageBuilderForResend, FixVersion fixVersion, FixSettings settings, TimeSource timeSource) {
         this.settings = settings;
 
 //        this.logInboundMessages = settings.isLogInboundMessages();
@@ -121,24 +130,24 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 //            messageLogFactory = new FileMessageLogFactory(settings.getLogDirectory());
 //        else
 //            messageLogFactory = null;
-
-        this.beginString = AsciiUtils.getBytes(fixVersion.getBeginString());
-
-        sessionMessageBuilder = new ByteBufferMessageBuilder(settings.getMaxOutboundMessageSize(), settings.getDoubleFormatterPrecision());
-        messageBuilderForResend = new ByteBufferMessageBuilder(settings.getMaxOutboundMessageSize(), settings.getDoubleFormatterPrecision());
         messageAssembler = new RawMessageAssembler(fixVersion, settings.getMaxOutboundMessageSize(), settings.isSendRequiresConnect());
         inboundMessageBuffer = new byte [settings.getMaxInboundMessageSize()];
         messageBufferForResend = new byte[settings.getMaxOutboundMessageSize()];
+        this.beginString = AsciiUtils.getBytes(fixVersion.getBeginString());
         this.timeSource = timeSource;
+        this.parser = parser;
+        this.parserForResend = parserForResend;
+        this.sessionMessageBuilder = sessionMessageBuilder;
+        this.messageBuilderForResend = messageBuilderForResend;
     }
 
-    @Override
-    public MessageBuilder createMessageBuilder() {
-        return new ByteBufferMessageBuilder(settings.getMaxOutboundMessageSize(), settings.getDoubleFormatterPrecision());
-    }
+//    @Override
+//    public B createMessageBuilder() {
+//        return new ByteBufferMessageBuilder(settings.getMaxOutboundMessageSize(), settings.getDoubleFormatterPrecision());
+//    }
 
     @Override
-    public void setEventListener(SessionEventListener eventListener) {
+    public void setEventListener(T eventListener) {
         this.eventListener = eventListener;
     }
 
@@ -186,7 +195,12 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         }
     }
 
-    /** Attempts to change state from expected current state to given one (CAS) */
+    /**
+     * Attempts to change state from expected current state to given one (CAS)
+     * @param expectedStatus
+     * @param newStatus
+     * @return
+     */
     protected boolean setSessionStatus(SessionStatus expectedStatus, SessionStatus newStatus) {
         assert expectedStatus != newStatus;
 
@@ -223,7 +237,6 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
     protected void connect(InputChannel in, OutputChannel out) {
         this.messageLog = (messageLogFactory != null) ? messageLogFactory.create(getSessionID()) : null;
-
         this.in = in;
         this.out = (messageLog != null) ? new LoggingOutputChannel(messageLog, out) : out;
     }
@@ -240,7 +253,10 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     protected void destroy(){
     }
 
-    /** Process inbound messages until session ends */
+    /**
+     * Process inbound messages until session ends
+     * @return
+     */
     protected final boolean processInboundMessages() {
         return processInboundMessages(null, 0);
     }
@@ -248,6 +264,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     /** Process inbound messages until session ends
      * @param logonBuffer buffer containing session LOGON message and may be some other messages or a part of them (can be null)
      * @param length actual number of bytes that should be consumed from logonBuffer
+     * @return
      */
     protected final boolean processInboundMessages(byte[] logonBuffer, int length) {
         LOGGER.info().append(this).append("Processing FIX Session").commit();
@@ -288,6 +305,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     }
 
     protected void errorProcessingMessage(String errorText, Exception e, boolean logStackTrace) {
+        //TODO:listener on error
         //if (active) {
             if (logStackTrace)
                 LOGGER.error().append(this).append(errorText).append(" : ").append(e).commit();
@@ -298,7 +316,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     }
 
 
-    protected int processInboundMessages(int bytesRead) throws IOException, InvalidFixMessageException, ConnectionProblemException {
+    protected int processInboundMessages(final int bytesRead) throws IOException, InvalidFixMessageException, ConnectionProblemException {
         assert bytesRead > 0;
         int messageStart = 0;
         int readMessageLength;
@@ -355,13 +373,14 @@ public abstract class FixCommunicator implements FixSession, Loggable {
      * Terminate socket connection immediately (no LOGOUT message is sent if session is in process).
      * Session enters {@link org.f1x.api.session.SessionStatus#Disconnected} state.
      * Initiator will try to re-connect after little delay (delay is configurable, subject to session schedule).
+     * @param cause
      */
     @Override
     public void disconnect(CharSequence cause) {
         LOGGER.info().append(this).append("FIX Disconnect due to ").append(cause).commit();
 
         setSessionStatus(SessionStatus.Disconnected);
-        long now = timeSource.currentTimeMillis();
+        final long now = timeSource.currentTimeMillis();
         sessionState.setLastConnectionTimestamp(now);
         try {
             if (in != null) { //TODO: Volatile
@@ -391,10 +410,11 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
     /**
      * Sends a message using next sequence number. This message is persisted in message store
+     * @param messageBuilder
+     * @throws java.io.IOException
      */
-    @Override
-    public void send(MessageBuilder messageBuilder) throws IOException {
-        long now = timeSource.currentTimeMillis();
+    protected void doSend(MessageBuilder messageBuilder) throws IOException {
+        final long now = timeSource.currentTimeMillis();
         synchronized (sendLock) {
             int msgSeqNum = sessionState.consumeNextSenderSeqNum();
             messageAssembler.send(getSessionID(), msgSeqNum, messageBuilder, messageStore, now, out);
@@ -402,18 +422,48 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         sessionState.setLastSentMessageTimestamp(now);
     }
 
+    @Override
+    public void send(B messageBuilder) throws IOException {
+        //TODO:optimize
+        send(messageBuilder.getMessageType(), messageBuilder);
+    }
+
+    @Override
+    public void send(final MsgType msgType, B messageBuilder) throws IOException {
+        beforeMessageSent(msgType, messageBuilder);
+        doSend(messageBuilder);
+    }
+
+    @Override
+    public void send(final CharSequence msgType, B messageBuilder) throws IOException {
+        beforeMessageSent(msgType, messageBuilder);
+        doSend(messageBuilder);
+    }
+
+    protected abstract void beforeLogonSent(final B messageBuilder);
+
     /**
-     * Resend a message with given sequence number. The message is not persisted in message store.
+     * Resend a message with given sequence number. The message is not persisted
+     * in message store.
+     * @param messageBuilder
+     * @param forcedMsgSeqNum
+     * @throws java.io.IOException
      */
-    protected void resend(MessageBuilder messageBuilder, int forcedMsgSeqNum) throws IOException {
-        long now = timeSource.currentTimeMillis();
+    protected void resend(B messageBuilder, int forcedMsgSeqNum) throws IOException {
+        final long now = timeSource.currentTimeMillis();
         synchronized (sendLock) {
             messageAssembler.send(getSessionID(), forcedMsgSeqNum, messageBuilder, null, now, out);
         }
         sessionState.setLastSentMessageTimestamp(now);
     }
 
-    /** @param forceResetSequenceNumbers pass true to force sequence numbers reset, otherwise implementation will rely on {@link org.f1x.api.FixSettings#isResetSequenceNumbersOnEachLogon()} */
+    /**
+     * * @param forceResetSequenceNumbers pass true to force sequence numbers
+     * reset, otherwise implementation will rely on
+     * {@link org.f1x.api.FixSettings#isResetSequenceNumbersOnEachLogon()}
+     * @param forceResetSequenceNumbers
+     * @throws java.io.IOException
+     */
     protected void sendLogon(boolean forceResetSequenceNumbers) throws IOException {
         if ( ! forceResetSequenceNumbers)
             forceResetSequenceNumbers = settings.isResetSequenceNumbersOnEachLogon();
@@ -429,16 +479,28 @@ public abstract class FixCommunicator implements FixSession, Loggable {
                 sessionMessageBuilder.add(FixTags.NextExpectedMsgSeqNum, sessionState.getNextTargetSeqNum());
 
             sessionMessageBuilder.add(FixTags.MaxMessageSize, settings.getMaxInboundMessageSize());
-
+            beforeLogonSent(sessionMessageBuilder);
             synchronized (sendLock) {
                 if (forceResetSequenceNumbers) {
                     sessionState.setNextSenderSeqNum(1);
+//                    sessionState.resetNextSeqNums();
                     messageStore.clean();
                 }
 
-                send(sessionMessageBuilder);
+                doSend(sessionMessageBuilder);
             }
         }
+    }
+
+    private void beforeMessageSent(final MsgType msgType, final B messageBuilder) {
+        if (eventListener != null) {
+            eventListener.beforeMessageSent(msgType, messageBuilder);
+        }
+    }
+
+    private void beforeMessageSent(final CharSequence msgType, final B messageBuilder) {
+        //TODO: optimize
+        beforeMessageSent(MsgType.parse(msgType.toString()), messageBuilder);
     }
 
     protected void sendLogout(CharSequence cause) {
@@ -451,7 +513,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
                     sessionMessageBuilder.setMessageType(MsgType.LOGOUT);
                     if (cause != null)
                         sessionMessageBuilder.add(FixTags.Text, cause);
-                    send(sessionMessageBuilder);
+                    send(MsgType.LOGOUT, sessionMessageBuilder);
                 }
             } catch (IOException e) {
                 LOGGER.warn().append(this).append("Error logging out from FIX session: ").append(e).commit();
@@ -464,6 +526,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     /**
      * Sends FIX Heartbeat(0) message
      * @param testReqId required when heartbeat is sent in response to TestRequest(1)
+     * @throws java.io.IOException
      */
     protected void sendHeartbeat(CharSequence testReqId) throws IOException {
         assertSessionStatus(SessionStatus.ApplicationConnected);
@@ -472,7 +535,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
             sessionMessageBuilder.setMessageType(MsgType.HEARTBEAT);
             if (testReqId!= null)
                 sessionMessageBuilder.add(FixTags.TestReqID, testReqId);
-            send(sessionMessageBuilder);
+            send(MsgType.HEARTBEAT, sessionMessageBuilder);
         }
     }
 
@@ -481,6 +544,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
      * @param testReqId Verifies that the opposite application is generating the heartbeat as the result of Test Request (1) and not a normal timeout.
      *                  The opposite application includes the TestReqID (112) in the resulting Heartbeat(0).
      *                  Any string can be used as the TestReqID (112) (one suggestion is to use a timestamp string).
+     * @throws java.io.IOException
      */
     protected void sendTestRequest(CharSequence testReqId) throws IOException {
         assertSessionStatus(SessionStatus.ApplicationConnected);
@@ -488,7 +552,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
             sessionMessageBuilder.clear();
             sessionMessageBuilder.setMessageType(MsgType.TEST_REQUEST);
             sessionMessageBuilder.add(FixTags.TestReqID, testReqId);
-            send(sessionMessageBuilder);
+            send(MsgType.TEST_REQUEST, sessionMessageBuilder);
         }
     }
 
@@ -497,6 +561,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
      * This method sends FIX Reject(3).
      * @param rejectReason optional reject reason
      * @param text optional explanation message
+     * @throws java.io.IOException
      */
     protected void sendReject(int rejectedMsgSeqNum, SessionRejectReason rejectReason, CharSequence text) throws IOException {
         assertSessionStatus(SessionStatus.ApplicationConnected);
@@ -510,7 +575,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
             if (text != null)
                 sessionMessageBuilder.add(FixTags.Text, text);
-            send(sessionMessageBuilder);
+            send(MsgType.REJECT, sessionMessageBuilder);
         }
     }
 
@@ -518,6 +583,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
      * This method sends ResendRequest(2).
      * @param beginSeqNo start of range to resend (inclusive)
      * @param endSeqNo end of range to resend (inclusive). Zero means infinity (resend up to the latest).
+     * @throws java.io.IOException
      */
     protected void sendResendRequest(int beginSeqNo, int endSeqNo) throws IOException {
 
@@ -530,7 +596,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
             sessionMessageBuilder.add(FixTags.BeginSeqNo, beginSeqNo);
             sessionMessageBuilder.add(FixTags.EndSeqNo, endSeqNo-1);
-            send(sessionMessageBuilder);
+            send(MsgType.RESEND_REQUEST, sessionMessageBuilder);
         }
 
     }
@@ -541,6 +607,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
      *
      * @param msgSeqNum message sequence number of this message
      * @param newSeqNo new sequence number
+     * @throws java.io.IOException
      */
     protected void sendGapFill(int msgSeqNum, int newSeqNo) throws IOException {
         assertSessionStatus2(SessionStatus.ApplicationConnected, SessionStatus.InitiatedLogout);
@@ -561,6 +628,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
      * resending a range of administrative messages or when resending actual application messages is not appropriate (e.g. stale messages).
      * Sets sender message sequence num to newSeqNo
      * @param newSeqNo new sequence number
+     * @throws java.io.IOException
      */
     protected void sendSequenceReset(int newSeqNo) throws IOException {
         assertSessionStatus(SessionStatus.ApplicationConnected);
@@ -573,15 +641,19 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
             synchronized (sendLock) {
                 sessionState.setNextSenderSeqNum(newSeqNo - 1);
-                send(sessionMessageBuilder); // In reset mode MsgSeqNum should be ignored
+                send(MsgType.SEQUENCE_RESET, sessionMessageBuilder); // In reset mode MsgSeqNum should be ignored
             }
         }
     }
 
 
 
-    protected void processInboundMessage(MessageParser parser, CharSequence msgType, int msgSeqNumX) throws IOException, InvalidFixMessageException, ConnectionProblemException {
-        long now = timeSource.currentTimeMillis();
+    protected void processInboundMessage(M parser, CharSequence msgType, int msgSeqNumX) throws IOException, InvalidFixMessageException, ConnectionProblemException {
+        //TODO: listener call before or after process?
+        if (eventListener != null) {
+            eventListener.onMessage(msgType, parser);
+        }
+        final long now = timeSource.currentTimeMillis();
         sessionState.setLastReceivedMessageTimestamp(now); //? maybe extract from message SendingTime(52) field?
 
         SessionStatus currentStatus = getSessionStatus();
@@ -595,7 +667,6 @@ public abstract class FixCommunicator implements FixSession, Loggable {
                     processInboundLogon(msgSeqNumX, parser);
                 else
                     throw InvalidFixMessageException.EXPECTING_LOGON_MESSAGE;
-
                 break;
             case InitiatedLogon:
                 if(FixCommunicatorHelper.isLogon(msgType))
@@ -611,7 +682,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
     }
 
-    private void processInSessionMessage(int msgSeqNumX, CharSequence msgType, MessageParser parser) throws IOException, InvalidFixMessageException, ConnectionProblemException {
+    private void processInSessionMessage(int msgSeqNumX, CharSequence msgType, M parser) throws IOException, InvalidFixMessageException, ConnectionProblemException {
         boolean processed = true;
         if (msgType.length() == 1) { // All session-level messages have MsgType expressed using single char
             switch (msgType.charAt(0)) {
@@ -643,14 +714,14 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     /**
      * @param msgSeqNumX message sequence number (negative for messages that have PossDupFlag=Y).
      */
-    private void _processInboundAppMessage(CharSequence msgType, int msgSeqNumX, MessageParser parser) throws IOException, InvalidFixMessageException {
+    private void _processInboundAppMessage(CharSequence msgType, int msgSeqNumX, M parser) throws IOException, InvalidFixMessageException {
         LOGGER.debug().append(this).append("Processing inbound message with type: ").append(msgType).commit();
 
         final boolean possDup;
         if (msgSeqNumX > 0) { // PossDupFlag=N
             int expectedTargetSeqNum = sessionState.getNextTargetSeqNum();
             if ( ! checkTargetMsgSeqNum(msgSeqNumX, expectedTargetSeqNum)) //Let's imagine we expected MsgSeqNum=5 but received 10
-                sendResendRequest(expectedTargetSeqNum, msgSeqNumX - 1);   //This will send ResendRequest(5, 0) and set currentResendEndSeqNo=9
+                sendResendRequest(expectedTargetSeqNum, msgSeqNumX - 1);   //This will doSend ResendRequest(5, 0) and set currentResendEndSeqNo=9
 
             sessionState.setNextTargetSeqNum(msgSeqNumX + 1);
             possDup = false;
@@ -667,15 +738,25 @@ public abstract class FixCommunicator implements FixSession, Loggable {
      * @param msgType type of the message [tag MsgType(35)].
      * @param msgSeqNum message sequence number [tag MsgSeqNum(34)].
      * @param possDup <code>true</code> if this message is marked as a duplicate using tag PossDupFlag(43)
+     * @param parser
+     * @throws java.io.IOException
      */
-    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, M parser) throws IOException {
         assert msgSeqNum > 0; // by default do nothing
+        if (eventListener != null) {
+            eventListener.onApplicationMessage(msgType, msgSeqNum, possDup, parser);
+        }
     }
 
     /**
      * Handle inbound LOGON message depending on FIX session role (acceptor/initator) and current status
+     * @param msgSeqNum
+     * @param parser
+     * @throws java.io.IOException
+     * @throws org.f1x.v1.InvalidFixMessageException
+     * @throws org.f1x.v1.ConnectionProblemException
      */
-    protected void processInboundLogon(int msgSeqNum, MessageParser parser) throws IOException, InvalidFixMessageException, ConnectionProblemException {
+    protected void processInboundLogon(int msgSeqNum, M parser) throws IOException, InvalidFixMessageException, ConnectionProblemException {
         LOGGER.debug().append(this).append("Processing inbound LOGON(A)").commit();
 
         if (msgSeqNum < 0) {
@@ -683,15 +764,16 @@ public abstract class FixCommunicator implements FixSession, Loggable {
             return;
         }
 
-
         boolean heartbeatIntervalPresent = false;
         boolean resetSeqNum = false;
+//        System.out.println("processInboundLogon(" + parser.describe() + ")");
         while (parser.next()) {
+//            System.out.println("1-processInboundLogon(" + parser.toString() + ")");
             switch (parser.getTagNum()) {
                 case FixTags.HeartBtInt:
-                    if (parser.getIntValue() != settings.getHeartBeatIntervalSec())
+                    if (parser.getIntValue() != settings.getHeartBeatIntervalSec()) {
                         throw ConnectionProblemException.HEARTBEAT_INTERVAL_MISMATCH; //TODO: Allow initiator to override heartbeat interval for acceptor
-
+                    }
                     heartbeatIntervalPresent = true;
                     break;
                 case FixTags.ResetSeqNumFlag:
@@ -709,10 +791,12 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         if (!heartbeatIntervalPresent)
             throw InvalidFixMessageException.NO_HEARTBEAT_INTERVAL;
 
-        if (resetSeqNum)
-            sessionState.setNextTargetSeqNum(1); //TODO: This is wrong 141=Y means that both sides should reset sequence numbers
+        if (resetSeqNum) {
+            sessionState.resetNextSeqNums();
+        }
+        //sessionState.setNextTargetSeqNum(1); //TODO: This is wrong 141=Y means that both sides should reset sequence numbers
 
-        SessionStatus currentStatus = getSessionStatus();
+        final SessionStatus currentStatus = getSessionStatus();
         if (currentStatus == SessionStatus.ApplicationConnected && !resetSeqNum)
             throw InvalidFixMessageException.IN_SESSION_LOGON_MESSAGE_WITHOUT_MSG_SEQ_RESET_NOT_EXPECTED;
 
@@ -720,39 +804,44 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         boolean expectedTargetMsgSeqNum = checkTargetMsgSeqNum(msgSeqNum, expectedTargetSeqNum);
         sessionState.setNextTargetSeqNum(msgSeqNum + 1);
 
-        if (currentStatus == SessionStatus.SocketConnected) {
-            setSessionStatus(SessionStatus.ReceivedLogon);
-            sendLogon(resetSeqNum);
-            setSessionStatus(SessionStatus.ApplicationConnected);
-        } else if (currentStatus == SessionStatus.InitiatedLogon) {
-            setSessionStatus(SessionStatus.ApplicationConnected);
-        } else if (currentStatus == SessionStatus.ApplicationConnected) {
-            sendLogon(resetSeqNum);
-        } else {
-            LOGGER.warn().append(this).append("Unexpected LOGON(A) in status: ").append(currentStatus).commit();
-            return;
+        switch (currentStatus) {
+            case SocketConnected:
+                setSessionStatus(SessionStatus.ReceivedLogon);
+                sendLogon(resetSeqNum);
+                setSessionStatus(SessionStatus.ApplicationConnected);
+                break;
+            case InitiatedLogon:
+                setSessionStatus(SessionStatus.ApplicationConnected);
+                break;
+            case ApplicationConnected:
+                sendLogon(resetSeqNum);
+                break;
+            default:
+                LOGGER.warn().append(this).append("Unexpected LOGON(A) in status: ").append(currentStatus).commit();
+                return;
         }
 
-        // *After* sending a Logon confirmation back, send a ResendRequest
+        // *After* sending a Logon confirmation back, doSend a ResendRequest
         if ( ! expectedTargetMsgSeqNum)
             sendResendRequest(expectedTargetSeqNum, msgSeqNum);
 
     }
 
-    /** Can be used to validate custom logon tags (e.g. Password(443) tag) */
-    protected void processCustomLogonTag(MessageParser parser) {
+    /**
+     * Can be used to validate custom logon tags (e.g. Password(443) tag)
+     * @param parser
+     */
+    protected void processCustomLogonTag(M parser) {
         // by default does nothing
     }
 
-    @SuppressWarnings("unused")
-    protected void processInboundLogout(int msgSeqNumX, MessageParser parser) throws IOException, InvalidFixMessageException {
+    protected void processInboundLogout(int msgSeqNumX, M parser) throws IOException, InvalidFixMessageException {
         LOGGER.debug().append(this).append("Processing inbound LOGOUT(5)").commit();
 
         if (msgSeqNumX < 0) {
             LOGGER.warn().append(this).append("Received LOGOUT(5) message with PossDupFlag=Y - ignoring. MsgSeqNum ").append(-msgSeqNumX).commit();
             return;
         }
-
 
         int expectedTargetSeqNum = sessionState.getNextTargetSeqNum();
         boolean expectedTargetMsgSeqNum = checkTargetMsgSeqNum(msgSeqNumX, expectedTargetSeqNum);
@@ -767,35 +856,42 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
         LOGGER.info().append(this).append("LOGOUT(5) received: ").append(temporaryByteArrayReference).commit();
 
-        SessionStatus currentStatus = getSessionStatus();
-        if (currentStatus == SessionStatus.ApplicationConnected) {
-            sessionState.setNextTargetSeqNum(msgSeqNumX + 1);
-            // If a message gap was detected, issue a ResendRequest to retrieve all missing messages followed by a Logout message which serves as a confirmation of the logout request.
-            // DO NOT terminate the session.  The initiator of the Logout sequence has responsibility to terminate the session.
-            // This allows the Logout initiator to respond to any ResendRequest message.
-            if ( ! expectedTargetMsgSeqNum)
-                sendResendRequest(expectedTargetSeqNum, msgSeqNumX);
-
-            sendLogout("Responding to LOGOUT(5) request");
-            if ( expectedTargetMsgSeqNum)
-                setSessionStatus(SessionStatus.SocketConnected);
-        } else if (currentStatus == SessionStatus.InitiatedLogout) {
-            if (expectedTargetMsgSeqNum)
-                sessionState.consumeNextTargetSeqNum();
-            // If this side was the initiator of the Logout sequence,
-            // then this is a Logout confirmation and the session should be immediately terminated upon receipt.
-            disconnect("Both sides exchanged LOGOUT(5)");
-        } else if (currentStatus == SessionStatus.InitiatedLogon){
-            if (expectedTargetMsgSeqNum)
-                sessionState.consumeNextTargetSeqNum();
-            disconnect("LOGON(A) rejected");
-        } else {
-            LOGGER.info().append(this).append("Unexpected LOGOUT(5) message in status: ").append(currentStatus).commit();
+        final SessionStatus currentStatus = getSessionStatus();
+        switch (currentStatus) {
+            case ApplicationConnected:
+                sessionState.setNextTargetSeqNum(msgSeqNumX + 1);
+                // If a message gap was detected, issue a ResendRequest to retrieve all missing messages followed by a Logout message which serves as a confirmation of the logout request.
+                // DO NOT terminate the session.  The initiator of the Logout sequence has responsibility to terminate the session.
+                // This allows the Logout initiator to respond to any ResendRequest message.
+                if (!expectedTargetMsgSeqNum) {
+                    sendResendRequest(expectedTargetSeqNum, msgSeqNumX);
+                }
+                sendLogout("Responding to LOGOUT(5) request");
+                if (expectedTargetMsgSeqNum) {
+                    setSessionStatus(SessionStatus.SocketConnected);
+                }
+                break;
+            case InitiatedLogout:
+                if (expectedTargetMsgSeqNum) {
+                    sessionState.consumeNextTargetSeqNum();
+                }
+                // If this side was the initiator of the Logout sequence,
+                // then this is a Logout confirmation and the session should be immediately terminated upon receipt.
+                disconnect("Both sides exchanged LOGOUT(5)");
+                break;
+            case InitiatedLogon:
+                if (expectedTargetMsgSeqNum) {
+                    sessionState.consumeNextTargetSeqNum();
+                }
+                disconnect("LOGON(A) rejected");
+                break;
+            default:
+                LOGGER.info().append(this).append("Unexpected LOGOUT(5) message in status: ").append(currentStatus).commit();
+                break;
         }
     }
 
-    @SuppressWarnings("unused")
-    protected void processInboundHeartbeat(int msgSeqNumX, MessageParser parser) throws InvalidFixMessageException, IOException {
+    protected void processInboundHeartbeat(int msgSeqNumX, M parser) throws InvalidFixMessageException, IOException {
         LOGGER.debug().append(this).append("Processing Inbound HEARTBEAT(0)").commit();
 
         if (msgSeqNumX < 0) {
@@ -810,7 +906,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         sessionState.setNextTargetSeqNum(msgSeqNumX + 1);
     }
 
-    protected void processInboundTestRequest(int msgSeqNumX, MessageParser parser) throws IOException, InvalidFixMessageException {
+    protected void processInboundTestRequest(int msgSeqNumX, M parser) throws IOException, InvalidFixMessageException {
         LOGGER.debug().append("Processing inbound TEST(1) request").commit();
 
         if (msgSeqNumX < 0) {
@@ -840,7 +936,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         }
     }
 
-    private void processInboundResendRequest(int msgSeqNumX, MessageParser parser) throws IOException, InvalidFixMessageException {
+    private void processInboundResendRequest(int msgSeqNumX, M parser) throws IOException, InvalidFixMessageException {
         LOGGER.debug().append("Processing inbound RESEND(2) request").commit();
 
         int expectedTargetSeqNum = sessionState.getNextTargetSeqNum();
@@ -936,11 +1032,12 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     }
 
     /**
+     * @param msgType
      * @param parser of resending message
      * @param messageBuilder that will be sent
      * @return true if a message requires the resending otherwise false
      */
-    protected boolean onMessageResend(CharSequence msgType, MessageParser parser, MessageBuilder messageBuilder) {
+    protected boolean onMessageResend(CharSequence msgType, M parser, MessageBuilder messageBuilder) {
         if(!isResendRequired(msgType))
             return false;
 
@@ -971,13 +1068,14 @@ public abstract class FixCommunicator implements FixSession, Loggable {
     }
 
     /**
+     * @param msgType
      * @return true if a message with this msgType requires the resending otherwise false
      */
     protected boolean isResendRequired(CharSequence msgType){
         return ! AdminMessageTypes.isAdmin(msgType) || msgType.charAt(0) == AdminMessageTypes.REJECT; // do not resend Admin message unless it is a REJECT(3)
     }
 
-    private void processInboundSequenceReset(int msgSeqNumX, MessageParser parser) throws IOException, InvalidFixMessageException {
+    private void processInboundSequenceReset(int msgSeqNumX, M parser) throws IOException, InvalidFixMessageException {
         LOGGER.debug().append(this).append("Processing inbound Sequence Reset").commit();
 
         boolean isGapFill = false;
@@ -1024,7 +1122,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         }
     }
 
-    protected void processInboundReject(int msgSeqNumX, MessageParser parser) throws InvalidFixMessageException, IOException {
+    protected void processInboundReject(int msgSeqNumX, M parser) throws InvalidFixMessageException, IOException {
         LOGGER.debug().append(this).append("Processing inbound REJECT(3)").commit();
 
         // Skip sequence number checking if we are dealing with GapFill
@@ -1061,7 +1159,12 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
     /// Timers
 
-    /** Schedules a timer to finish current FIX session according to FIX Session Schedule */
+    /**
+     * Schedules a timer to finish current FIX session according to FIX Session
+     * Schedule
+     *
+     * @param timeout
+     */
     protected void scheduleSessionEnd(long timeout) {
         SessionEndTask timer = new SessionEndTask(this);
         GlobalTimer.getInstance().schedule(timer, timeout);
@@ -1080,7 +1183,7 @@ public abstract class FixCommunicator implements FixSession, Loggable {
         int checkIntervalMs = settings.getHeartbeatCheckIntervalMs();
         if (checkIntervalMs > 0) {
             if (sessionMonitoringTask.get() == null) {
-                SessionMonitoringTask timer = new SessionMonitoringTask(this);
+                DefaultSessionMonitoringTask timer = new DefaultSessionMonitoringTask(this);
                 GlobalTimer.getInstance().schedule(timer, checkIntervalMs, checkIntervalMs);
                 sessionMonitoringTask.set(timer);
             } else {
@@ -1105,11 +1208,17 @@ public abstract class FixCommunicator implements FixSession, Loggable {
 
     /**
      * <p>Check message sequence number of inbound message. This method is not called for inbound messages that have PossDupFlag(43)=Y.</p>
-     * 
+     *
      * <p> If the incoming message has a sequence number less than expected and the PossDupFlag is not set, it indicates a serious error.
      * It is strongly recommended that the session be terminated and manual intervention be initiated.
      * Default implementation throws TARGET_MSG_SEQ_NUM_LESS_EXPECTED exception in this case. </p>
-     * @return true if actual sequence number match expected or false if Communicator should issue RESEND(2) request from <tt>expected</tt> till <tt>actual</tt>.
+     * @param actual
+     * @param expected
+     * @return true if actual sequence number match expected or false if
+     * Communicator should issue RESEND(2) request from <tt>expected</tt> till
+     * <tt>actual</tt>.
+     * @throws org.f1x.v1.InvalidFixMessageException
+     * @throws java.io.IOException
      */
     protected boolean checkTargetMsgSeqNum(int actual, int expected) throws InvalidFixMessageException, IOException {
         if (actual < expected)

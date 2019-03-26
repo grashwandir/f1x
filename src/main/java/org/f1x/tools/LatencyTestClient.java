@@ -18,19 +18,27 @@ import org.f1x.SessionIDBean;
 import org.f1x.api.FixInitiatorSettings;
 import org.f1x.api.FixVersion;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.Tools;
-import org.f1x.api.message.fields.*;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionStatus;
 import org.f1x.v1.FixSessionInitiator;
-import org.gflogger.config.xml.XmlLogFactoryConfigurator;
+import org.f1x.api.message.IMessageParser;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import org.f1x.api.message.fields.FixTags;
+import org.f1x.api.message.fields.HandlInst;
+import org.f1x.api.message.fields.MDEntryType;
+import org.f1x.api.message.fields.MsgType;
+import org.f1x.api.message.fields.OrdType;
+import org.f1x.api.message.fields.SecurityType;
+import org.f1x.api.message.fields.Side;
+import org.f1x.api.message.fields.TimeInForce;
+import org.f1x.log.file.LogUtils;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
-public class LatencyTestClient extends FixSessionInitiator {
+public class LatencyTestClient extends FixSessionInitiator<InitiatorFixSessionListener> {
     private static final long BASE_NANOTIME = System.nanoTime();
 
     private final MessageBuilder mb;
@@ -43,6 +51,7 @@ public class LatencyTestClient extends FixSessionInitiator {
     private static final int MICROS_TIMESTAMP_TAG = 8888;
 
     private static final MsgType TEST_MSG_TYPE = (true) ? MsgType.ORDER_SINGLE : MsgType.MARKET_DATA_SNAPSHOT_FULL_REFRESH;
+
     /**
      * @param messageRate messages per second
      */
@@ -107,7 +116,7 @@ public class LatencyTestClient extends FixSessionInitiator {
                 mb.add(FixTags.QuoteEntryID, "OFFER1");
             }
         }
-        send(mb);
+        doSend(mb);
     }
 
     @Override
@@ -145,7 +154,7 @@ public class LatencyTestClient extends FixSessionInitiator {
     }
 
     @Override
-    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, IMessageParser parser) throws IOException {
         if (Tools.equals(TEST_MSG_TYPE, msgType)) {
             while(parser.next()) {
                 if (parser.getTagNum() == MICROS_TIMESTAMP_TAG) {
@@ -195,12 +204,7 @@ public class LatencyTestClient extends FixSessionInitiator {
     }
 
     public static void main (String [] args) throws InterruptedException, IOException {
-        try {
-            XmlLogFactoryConfigurator.configure();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        LogUtils.configure();
         String host = args[0];
         int port = Integer.parseInt(args[1]);
         int rate = args.length > 2 ? Integer.parseInt(args[2]) : 1000;

@@ -18,7 +18,7 @@ import com.lmax.disruptor.ExceptionHandler;
 
 import static org.junit.Assert.fail;
 
-public class TestExceptionHandler implements ExceptionHandler {
+public class TestExceptionHandler implements ExceptionHandler<Object> {
 
     @Override
     public void handleEventException(Throwable ex, long sequence, Object event) {

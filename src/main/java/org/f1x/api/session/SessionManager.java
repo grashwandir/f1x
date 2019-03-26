@@ -2,17 +2,17 @@ package org.f1x.api.session;
 
 import org.f1x.v1.FixSessionAcceptor;
 
-public interface SessionManager {
+public interface SessionManager<T extends AcceptorFixSessionListener> {
 
-    void addSession(FixSessionAcceptor acceptor);
+    void addSession(FixSessionAcceptor<T> acceptor);
 
-    FixSessionAcceptor removeSession(SessionID sessionID);
+    FixSessionAcceptor<T> removeSession(SessionID sessionID);
 
-    FixSessionAcceptor getSession(SessionID sessionID);
+    FixSessionAcceptor<T> getSession(SessionID sessionID);
 
-    FixSessionAcceptor lockSession(SessionID sessionID) throws FailedLockException;
+    FixSessionAcceptor<T> lockSession(SessionID sessionID) throws FailedLockException;
 
-    FixSessionAcceptor unlockSession(SessionID sessionID);
+    FixSessionAcceptor<T> unlockSession(SessionID sessionID);
 
     void close();
 

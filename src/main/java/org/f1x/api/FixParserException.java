@@ -14,7 +14,7 @@
 
 package org.f1x.api;
 
-public class FixParserException extends RuntimeException {
+public class FixParserException extends UncheckedFixException {
     static final long serialVersionUID = 1L;
 
     public FixParserException(String message) {

@@ -1,7 +1,5 @@
 package org.f1x.v1.state;
 
-import org.f1x.v1.InvalidFixMessageException;
-
 /**
  * Not thread safe. Only for tests.
  */

@@ -11,18 +11,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.f1x.log.file;
 
-import org.f1x.log.AsIsLogFormatter;
 import org.f1x.util.TestUtils;
 import org.f1x.util.TimeSource;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -30,8 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Test_DailyFileMessageLog extends AbstractMessageLogTest {
 
-
-    @Test (timeout = 30000)
+    @Test(timeout = 30000)
     public void test() throws InterruptedException {
 
         final TestTimeSource timeSource = new TestTimeSource("20140303-23:01:02.999");
@@ -46,7 +43,6 @@ public class Test_DailyFileMessageLog extends AbstractMessageLogTest {
             }
         };
         log.start(SESSION_ID, timeSource, flushPeriod);
-
 
         log(log, "Message1");
         log(log, "Message2");
@@ -63,10 +59,25 @@ public class Test_DailyFileMessageLog extends AbstractMessageLogTest {
         log(log, "Message5");
         log(log, "Message6");
 
-
         log.close();
 
-        File [] logFiles = logDir.listFiles();
+        File[] logFiles = logDir.listFiles();
+        Arrays.sort(logFiles, new Comparator<File>() {
+            @Override
+            public int compare(File f1, File f2) {
+                if (f1 == null && f2 == null) {
+                    return 0;
+                }
+                if (f1 == null) {
+                    return -1;
+                }
+                if (f2 == null) {
+                    return 1;
+                }
+                return f1.getName().compareTo(f2.getName());
+            }
+        });
+
         Assert.assertNotNull(logFiles);
         Assert.assertEquals(2, logFiles.length);
 
@@ -74,15 +85,14 @@ public class Test_DailyFileMessageLog extends AbstractMessageLogTest {
         String file1Content = TestUtils.readText(logFiles[0]);
         Assert.assertEquals("Message1Message2Message3", file1Content);
 
-
         Assert.assertEquals("SERVER-CLIENT-20140304.log", logFiles[1].getName());
         String file2Content = TestUtils.readText(logFiles[1]);
         Assert.assertEquals("Message4Message5Message6", file2Content);
 
     }
 
-
     private static class TestTimeSource implements TimeSource {
+
         final ReentrantLock lock = new ReentrantLock();
         final Condition wakeUpSignal = lock.newCondition();
         final Condition sleeperIsWaiting = lock.newCondition();

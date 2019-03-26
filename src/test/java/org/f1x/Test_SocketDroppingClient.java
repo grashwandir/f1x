@@ -31,6 +31,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.f1x.api.session.AcceptorFixSessionListener;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 /**
  * Stress test to see how initiator reacts to random drops socket shortly after LOGON. We made 10000 attempts to initiate connection every 1..10 milliseconds.
@@ -62,7 +64,7 @@ public class Test_SocketDroppingClient extends  TestCommon {
         server.close();
     }
 
-    private static class SimpleClient extends FixSessionInitiator {
+    private static class SimpleClient extends FixSessionInitiator<InitiatorFixSessionListener> {
         private final CountDownLatch disconnectCounter;
 
         public SimpleClient(String host, int port, SessionID sessionID, int numberOfConnectionAttempts) {
@@ -115,7 +117,7 @@ public class Test_SocketDroppingClient extends  TestCommon {
     }
 
 
-    private static class SocketDroppingServerSessionAcceptor extends FixSessionAcceptor {
+    private static class SocketDroppingServerSessionAcceptor extends FixSessionAcceptor<AcceptorFixSessionListener> {
         private static SocketDroppingServerSessionAcceptor create(SessionID sessionID) {
             return new SocketDroppingServerSessionAcceptor(FixVersion.FIX44, sessionID, new FixAcceptorSettings());
         }

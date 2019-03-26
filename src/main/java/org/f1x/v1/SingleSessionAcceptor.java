@@ -14,15 +14,17 @@
 
 package org.f1x.v1;
 
+import org.f1x.api.session.AcceptorFixSessionListener;
+
 import java.net.Socket;
 
 public class SingleSessionAcceptor extends AbstractSessionAcceptor {
 
     protected static final int CONNECTION_QUEUE_SIZE = 1;
 
-    private final FixSessionAcceptor acceptor;
+    private final FixSessionAcceptor<AcceptorFixSessionListener> acceptor;
 
-    public SingleSessionAcceptor(String host, int port, FixSessionAcceptor acceptor) {
+    public SingleSessionAcceptor(String host, int port, FixSessionAcceptor<AcceptorFixSessionListener> acceptor) {
         super(host, port, CONNECTION_QUEUE_SIZE);
         this.acceptor = acceptor;
     }

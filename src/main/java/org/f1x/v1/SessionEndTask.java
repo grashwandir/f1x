@@ -1,16 +1,17 @@
 package org.f1x.v1;
 
 import org.f1x.api.session.FixSession;
-import org.gflogger.GFLog;
-import org.gflogger.GFLogFactory;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.message.MessageBuilder;
 
 import java.util.TimerTask;
+import org.f1x.api.session.FixSessionListener;
 
 final class SessionEndTask extends TimerTask {
 
-    private final FixSession session;
+    private final FixSession<? extends IMessageParser, ? extends MessageBuilder, ? extends FixSessionListener<? extends IMessageParser, ? extends MessageBuilder>> session;
 
-    public SessionEndTask(FixSession session) {
+    public SessionEndTask(FixSession<? extends IMessageParser, ? extends MessageBuilder, ? extends FixSessionListener<? extends IMessageParser, ? extends MessageBuilder>> session) {
         this.session = session;
     }
 

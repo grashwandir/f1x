@@ -25,15 +25,18 @@ import org.junit.Test;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 public class Test_SimpleSessionSchedule {
 
     private static final String LONG_TIME_AGO = "20101212-00:00:00.000"; // some random time in the past (exact moment is not important)
-    private StoredTimeSource timeSource = new StoredTimeSource() {
+    private final StoredTimeSource timeSource = new StoredTimeSource() {
         {
             setLocalTime(LONG_TIME_AGO);
         }
     };
+
+    private final Object lock = new Object();
 
     private SimpleSessionSchedule schedule;
 
@@ -51,7 +54,7 @@ public class Test_SimpleSessionSchedule {
     @Test(expected = IllegalArgumentException.class)
     public void testOneSidedWeekdayEnd () {
         makeSchedule(-1, Calendar.FRIDAY, "11:00:00", "22:00:00", true);
-    }    
+    }
 
     /** Test "every day same hours" schedule */
     @Test
@@ -97,7 +100,7 @@ public class Test_SimpleSessionSchedule {
         // Special cases:
         assertMostRecentSession ("20140120-08:59:00.000", "20140117-09:00:00.000", "20140117-23:00:00.000"); // shortly before session open on Monday get us Friday session
     }
-        
+
     /** Test "Monday to Friday hours" schedule where start time is later than end time */
     @Test
     public void testMondayFridayMostRecentSessionBefore_Inverted () {
@@ -252,7 +255,7 @@ public class Test_SimpleSessionSchedule {
         assertNextSession ("20140121-00:00:00.000", "20140127-23:00:00.000", "20140131-22:00:00.000"); // midnight Jan 20
         assertNextSession ("20140121-12:00:00.000", "20140127-23:00:00.000", "20140131-22:00:00.000"); // noon Jan 20
     }
-    
+
     @Test
     public void testWaitTime() throws InterruptedException {
         schedule = makeSchedule(Calendar.MONDAY, Calendar.FRIDAY, "09:00:00", "23:00:00", true);
@@ -278,7 +281,7 @@ public class Test_SimpleSessionSchedule {
 
     private void assertMostRecentSession (String currentTime, String expectedStart, String expectedEnd) {
         long now = TestUtils.parseLocalTimestamp(currentTime);
-        synchronized (schedule) { // make assert happy
+        synchronized (lock) { // make assert happy
             schedule.setMostRecentSessionBefore(now);
         }
 
@@ -291,7 +294,7 @@ public class Test_SimpleSessionSchedule {
 
     private void assertNextSession (String currentTime, String expectedStart, String expectedEnd) {
         long now = TestUtils.parseLocalTimestamp(currentTime);
-        synchronized (schedule) { // make assert happy
+        synchronized (lock) { // make assert happy
             schedule.setNextSessionAfter(now);
         }
 
@@ -337,7 +340,7 @@ public class Test_SimpleSessionSchedule {
 
         MessageStore messageStore = new InMemoryMessageStore(1 << 20);
 
-        FixSessionInitiator initiator = null;
+        FixSessionInitiator<InitiatorFixSessionListener> initiator = null;
 
         initiator.setMessageStore(messageStore);
         initiator.setSessionSchedule(schedule);

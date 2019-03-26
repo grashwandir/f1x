@@ -25,9 +25,13 @@ import java.util.TimeZone;
 public class DailyFileMessageLog extends PeriodicFlushingMessageLog {
     private final OutputStreamRollover dailyFileRoller;
 
-
     /**
+     * @param sessionID
      * @param logDir directory where log files will reside
+     * @param streamFactory
+     * @param formatter
+     * @param timeSource
+     * @param tz
      */
     public DailyFileMessageLog(SessionID sessionID, File logDir, OutputStreamFactory streamFactory, LogFormatter formatter, TimeSource timeSource, TimeZone tz) {
         super(null, formatter);

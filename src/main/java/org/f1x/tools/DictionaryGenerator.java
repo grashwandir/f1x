@@ -126,7 +126,7 @@ public class DictionaryGenerator {
         }
     }
 
-    private void generateEnum(String name, NodeList fieldList, Class enumBaseClass, String enumCodeType, String literalValuePrefix, String literalValueSuffix) throws IOException {
+    private void generateEnum(String name, NodeList fieldList, Class<?> enumBaseClass, String enumCodeType, String literalValuePrefix, String literalValueSuffix) throws IOException {
         Writer enumWriter = generateJavaSource("enum", "org.f1x.api.message.fields", name, enumBaseClass.getName());
 
         generateValuesList(fieldList, literalValuePrefix, literalValueSuffix, enumWriter);

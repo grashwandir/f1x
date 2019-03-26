@@ -23,14 +23,17 @@ import org.f1x.util.StoredTimeSource;
 import org.junit.Test;
 
 import java.io.IOException;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.message.MessageBuilder;
+import org.f1x.api.session.FixSessionListener;
 
 /** Verify format of administrative messages */
 public class Test_FixCommunicatorAdminMessageFormats {
 
     private final TextOutputChannel out = new TextOutputChannel();
-    private final FixCommunicator fix = new TestFixCommunicator ( new SessionIDBean("CLIENT", "SERVER"), StoredTimeSource.makeFromUTCTimestamp("20140101-10:10:10.100"), new EmptyInputChannel(), out);
+    private final FixCommunicator<IMessageParser, MessageBuilder, FixSessionListener<IMessageParser, MessageBuilder>> fix = new TestFixCommunicator(new SessionIDBean("CLIENT", "SERVER"), StoredTimeSource.makeFromUTCTimestamp("20140101-10:10:10.100"), new EmptyInputChannel(), out);
 
-    {
+    public Test_FixCommunicatorAdminMessageFormats() {
         fix.init();
     }
 

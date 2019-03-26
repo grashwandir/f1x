@@ -25,11 +25,14 @@ import org.f1x.v1.schedule.SessionTimes;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicReference;
+import org.f1x.api.message.MessageBuilder;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 /**
  * FIX Communicator that initiates outbound FIX connections
+ * @param <T>
  */
-public class FixSessionInitiator extends FixSocketCommunicator {
+public class FixSessionInitiator<T extends InitiatorFixSessionListener> extends FixSocketCommunicator<T> {
 
     private final SessionID sessionID;
     private final String host;
@@ -189,9 +192,17 @@ public class FixSessionInitiator extends FixSocketCommunicator {
     public void close() {
         super.close();
 
-        Thread initiatorThread = this.initiatorThread.get();
-        if (initiatorThread != null)
-            initiatorThread.interrupt();
+        final Thread _initiatorThread = this.initiatorThread.get();
+        if (_initiatorThread != null) {
+            _initiatorThread.interrupt();
+        }
+    }
+
+    @Override
+    protected void beforeLogonSent(MessageBuilder messageBuilder) {
+        if (eventListener != null) {
+            eventListener.beforeLogonSent(messageBuilder);
+        }
     }
 
 }

@@ -59,7 +59,7 @@ public final class TimestampParser {
         return calendar.getTimeInMillis();
     }
 
-    public long getUTCDateOnly(byte [] buffer, int offset, int length) {
+    public long getUTCDateOnly(byte[] buffer, int offset, int length) throws FixParserException {
         //TODO: Validate ':' characters
 
         calendar.set (Calendar.YEAR,  NumbersParser.parsePositiveInt(buffer, offset, 4));

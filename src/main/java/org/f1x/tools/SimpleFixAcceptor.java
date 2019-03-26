@@ -30,6 +30,8 @@ import org.f1x.v1.SingleSessionAcceptor;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.session.AcceptorFixSessionListener;
 
 public class SimpleFixAcceptor extends SingleSessionAcceptor {
     public SimpleFixAcceptor(int bindPort, SessionID sessionID) {
@@ -54,7 +56,7 @@ public class SimpleFixAcceptor extends SingleSessionAcceptor {
         acceptor.run();
     }
 
-    private static class SimpleFixSessionAcceptor extends FixSessionAcceptor {
+    private static class SimpleFixSessionAcceptor extends FixSessionAcceptor<AcceptorFixSessionListener> {
         private final ByteEnumLookup<Side> ordSideLookup = new ByteEnumLookup<>(Side.class);
         private final ByteArrayReference symbol = new ByteArrayReference();
         private final MessageBuilder mb;
@@ -69,7 +71,7 @@ public class SimpleFixAcceptor extends SingleSessionAcceptor {
         }
 
         @Override
-        protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+        protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, IMessageParser parser) throws IOException {
             if (Tools.equals(MsgType.ORDER_SINGLE, msgType)) {
                 try {
                     processInboundOrderSingle(parser);
@@ -142,7 +144,7 @@ public class SimpleFixAcceptor extends SingleSessionAcceptor {
                 mb.add(FixTags.SecurityType, SecurityType.FOREIGN_EXCHANGE_CONTRACT);
                 mb.addUTCTimestamp(FixTags.TransactTime, System.currentTimeMillis());
                 mb.add(FixTags.OrdStatus, OrdStatus.NEW);
-                send(mb);
+                doSend(mb);
             }
         }
     }

@@ -14,8 +14,17 @@
 
 package org.f1x.api.session;
 
-public interface SessionEventListener {
+import org.f1x.api.message.MessageBuilder;
+import org.f1x.api.message.MessageParser;
+import org.f1x.api.message.fields.MsgType;
 
-    void onStatusChanged(SessionID sessionID, SessionStatus oldStatus, SessionStatus newStatus);
+public interface SessionListener<M extends MessageParser, B extends MessageBuilder> {
 
+    void onStatusChanged(final SessionID sessionID, final SessionStatus oldStatus, final SessionStatus newStatus);
+
+    void onMessage(final CharSequence msgType, final M msg);
+
+    void beforeMessageSent(final MsgType msgType, final B messageBuilder);
+
+    void onError(final Exception ex);
 }

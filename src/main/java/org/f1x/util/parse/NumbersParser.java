@@ -11,78 +11,218 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.f1x.util.parse;
 
 import org.f1x.api.FixParserException;
+import org.f1x.util.ByteArrayReference;
 
 public class NumbersParser {
-    public static int parseInt(byte [] buffer, int offset, int length) {
-        if (length == 0)
-            throw new FixParserException("Number cannot be empty");
+    private static final int INT_MAX_VALUE_DIV_10 = 214748364;
+    private static final long LONG_MAX_VALUE_DIV_10 = 922337203685477580L;
+    private static final int FLOAT_BIAS_EXP = 127;
+    private static final int FLOAT_MANTISSA_WIDTH = 23;
+    private static final int FLOAT_ASSUMED_BIT = 8388608;
+    private static final int FLOAT_MANTISSA_BITMASK = 8388607;
+    private static final int FLOAT_NORM_EXP = 150;
+    private static final int FLOAT_OVERFLOW_BITMASK = -16777216;
 
+    /**
+     * got from data-connectors-commons 22-22.0.13
+     *
+     * @param sc
+     * @param startIncl
+     * @param endExcl
+     * @return
+     */
+    public static int parseInt(final CharSequence sc, int startIncl, final int endExcl) {
+        if (startIncl == endExcl) {
+            throw new NumberFormatException("Empty string");
+        }
+        int value = 0;
+        char ch = sc.charAt(startIncl);
+        final boolean negative = ch == '-';
+        if (ch == '+' || negative) {
+            if (++startIncl == endExcl) {
+                throw new NumberFormatException(sc.subSequence(startIncl, endExcl).toString());
+            }
+            ch = sc.charAt(startIncl);
+        }
+        while (true) {
+            if (ch != ',') {
+                final int digit = ch - '0';
+                if (digit < 0 || digit > 9) {
+                    throw new NumberFormatException("Illegal digit at position " + (startIncl + 1) + " in: " + sc.subSequence(startIncl, endExcl).toString());
+                }
+                // decompiled: -214748364
+                if (value < -INT_MAX_VALUE_DIV_10) {
+                    throw new NumberFormatException("Integer (4-byte) too large: " + sc);
+                }
+                value = value * 10 - digit;
+                if (value > 0) {
+                    throw new NumberFormatException("Integer (4-byte) too large: " + sc);
+                }
+            }
+            if (++startIncl == endExcl) {
+                if (negative) {
+                    return value;
+                }
+                if (value == Integer.MIN_VALUE) {
+                    throw new NumberFormatException("Integer (4-byte) too large: " + sc);
+                }
+                return -value;
+            } else {
+                ch = sc.charAt(startIncl);
+            }
+        }
+    }
+
+    public static int parseInt1(final byte[] buffer, final int offset, final int length) {
+        final ByteArrayReference bytesCs = new ByteArrayReference(buffer, offset, length);
+        return parseInt(bytesCs, offset, length + offset);
+    }
+
+    /**
+     * got from data-connectors-commons 22-22.0.13
+     *
+     * @param sc
+     * @param startIncl
+     * @param endExcl
+     * @return
+     */
+    public static long parseLong(final CharSequence sc, int startIncl, final int endExcl) {
+        if (startIncl == endExcl) {
+            throw new NumberFormatException("Empty string");
+        }
+        long value = 0L;
+        char ch = sc.charAt(startIncl);
+        final boolean negative = ch == '-';
+        if (ch == '+' || negative) {
+            if (++startIncl == endExcl) {
+                throw new NumberFormatException(sc.subSequence(startIncl, endExcl).toString());
+            }
+            ch = sc.charAt(startIncl);
+        }
+        while (true) {
+            if (ch != ',') {
+                final int digit = ch - '0';
+                if (digit < 0 || digit > 9) {
+                    throw new NumberFormatException("Illegal digit at position " + (startIncl + 1) + " in: " + sc.subSequence(startIncl, endExcl).toString());
+                }
+                // decompiled: -922337203685477580L
+                if (value < -LONG_MAX_VALUE_DIV_10) {
+                    throw new NumberFormatException("Long integer (8-byte) too large: " + sc);
+                }
+                value = value * 10L - digit;
+                if (value > 0L) {
+                    throw new NumberFormatException("Long integer (8-byte) too large: " + sc);
+                }
+            }
+            if (++startIncl == endExcl) {
+                if (negative) {
+                    return value;
+                }
+                if (value == Long.MIN_VALUE) {
+                    throw new NumberFormatException("Long integer (8-byte) too large: " + sc);
+                }
+                return -value;
+            } else {
+                ch = sc.charAt(startIncl);
+            }
+        }
+    }
+
+    public static int parseInt(byte[] buffer, int offset, int length) {
+        if (length == 0) {
+            throw new FixParserException("Number cannot be empty");
+        }
         int result = 0;
         boolean isNegative = false;
-        for (int i=0; i < length; i++) {
-            byte ch = buffer[offset+i];
-            if (ch >= '0' && ch <= '9')
-                result = 10*result + (ch - '0');
-            else
-                if (i == 0 && ch == '-')
-                    isNegative = true;
-                else
-                    throw new FixParserException("Number contains unexpected character at position [" + (i+offset) + "]: '" + (char) ch + "'");
+        for (int i = 0; i < length; i++) {
+            byte ch = buffer[offset + i];
+            if (ch >= '0' && ch <= '9') {
+                if (result > INT_MAX_VALUE_DIV_10) {
+                    throw new NumberFormatException("Integer (4-byte) too large: " + result);
+                }
+                result = 10 * result + (ch - '0');
+//                if (result > 0) {
+//                    throw new NumberFormatException("Integer (4-byte) too large: " + result);
+//                }
+            } else if (i == 0 && ch == '-') {
+                isNegative = true;
+            } else {
+                throw new FixParserException("Number contains unexpected character at position [" + (i + offset) + "]: '" + (char) ch + "'");
+            }
         }
         return isNegative ? -result : result;
     }
 
-    public static int parsePositiveInt (byte [] buffer, int offset, int length) {
+    public static int parsePositiveInt(byte[] buffer, int offset, int length) {
         int result = 0;
-        for (int i=0; i < length; i++) {
-            byte b = buffer[offset++] ;
-            if (b < '0' || b > '9')
+        for (int i = 0; i < length; i++) {
+            byte b = buffer[offset++];
+            if (b < '0' || b > '9') {
                 throw new FixParserException("Expecting digit");
-            result = 10*result + (b - '0');
+            }
+            result = 10 * result + (b - '0');
         }
         return result;
     }
 
-    public static long parseLong(byte [] buffer, int offset, int length) {
-        if (length == 0)
+    public static long parseLong(byte[] buffer, int offset, int length) {
+        if (length == 0) {
             throw new FixParserException("Number cannot be empty");
-
+        }
         long result = 0;
         boolean isNegative = false;
-        for (int i=0; i < length; i++) {
-            byte ch = buffer[offset+i];
-            if (ch >= '0' && ch <= '9')
-                result = 10*result + (ch - '0');
-            else
-                if (i == 0 && ch == '-')
-                    isNegative = true;
-                else
-                    throw new FixParserException("Number contains unexpected character at position [" + (i+offset) + "]: '" + (char) ch + "'");
+        for (int i = 0; i < length; i++) {
+            byte ch = buffer[offset + i];
+            if (ch >= '0' && ch <= '9') {
+                if (result > LONG_MAX_VALUE_DIV_10) {
+                    throw new NumberFormatException("Long integer (8-byte) too large: " + result);
+                }
+                result = 10 * result + (ch - '0');
+//                if (result > 0L) {
+//                    throw new NumberFormatException("Long integer (8-byte) too large: " + result);
+//                }
+            } else if (i == 0 && ch == '-') {
+                isNegative = true;
+            } else {
+                throw new FixParserException("Number contains unexpected character at position [" + (i + offset) + "]: '" + (char) ch + "'");
+            }
         }
         return isNegative ? -result : result;
     }
 
-    /** Parses double value. Adaptation of algorithm published by Jean-Marie Dautell */
-     public static double parseDouble(final byte [] buffer, final int offset, final int length) {
-         if (length == 0)
-             throw new FixParserException("Number cannot be empty");
+    public static long parseLong1(byte[] buffer, int offset, int length) {
+        final ByteArrayReference bytesCs = new ByteArrayReference(buffer, offset, length);
+        return parseLong(bytesCs, offset, length + offset);
+    }
+    /**
+     * Parses double value. Adaptation of algorithm published by Jean-Marie
+     * Dautell
+     *
+     * @param buffer
+     * @param offset
+     * @param length
+     * @return
+     */
+    public static double parseDouble(final byte[] buffer, final int offset, final int length) {
+        if (length == 0) {
+            throw new FixParserException("Number cannot be empty");
+        }
         try {
             double result = 0.0;
             int exp = 0;
 
             boolean isNegative = (buffer[offset] == '-');
-            int i = (isNegative || (buffer[offset] == '+')) ? offset+1 : offset;
+            int i = (isNegative || (buffer[offset] == '+')) ? offset + 1 : offset;
             final int limit = offset + length;
 
             // Reads decimal number.
             boolean fraction = false;
             do {
                 byte c = buffer[i];
-                if ( (c == '.') && (!fraction)) {
+                if ((c == '.') && (!fraction)) {
                     fraction = true;
                 } else if ((c >= '0') && (c <= '9')) {
                     result = result * 10 + (c - '0');
@@ -90,12 +230,11 @@ public class NumbersParser {
                         exp--;
                     }
                 } else {
-                    throw new NumberFormatException("For input characters: invalid character at position " + (i-offset));
+                    throw new NumberFormatException("For input characters: invalid character at position " + (i - offset));
                 }
-            } while (++ i < limit);
+            } while (++i < limit);
 
-
-            result = isNegative ? - result : result;
+            result = isNegative ? -result : result;
 
             // Returns product decimal number with exponent.
             if (exp >= -308) {
@@ -103,11 +242,92 @@ public class NumbersParser {
             } else {
                 // Min: 4.9E-324
                 result /= 1E21; // Exact divisor.
-                exp = Math.max(-308, exp+21);
-                return result/ DOUBLE_POW_10[-exp];
+                exp = Math.max(-308, exp + 21);
+                return result / DOUBLE_POW_10[-exp];
             }
 
+        } catch (IndexOutOfBoundsException e) {
+            throw new NumberFormatException();
+        }
+    }
 
+    public static float parseFloat(final byte[] buffer, final int offset, final int length) {
+        if (length == 0) {
+            throw new FixParserException("Number cannot be empty");
+        }
+        try {
+            int numerator = 0;
+            float denominator = 1.0f;
+            boolean dotSeen = false;
+            boolean overflow = false;
+//            char ch = sc.charAt(startIncl);
+//            byte ch = sc[startIncl];
+//            if (ch == '+' || ch == '-') {
+//                if (ch == '-') {
+//                    sign = Integer.MIN_VALUE;
+//                }
+//                if (++startIncl == endExcl) {
+//                    throw new NumberFormatException("For input characters: invalid character at position " + (startIncl));
+//                }
+//                ch = sc[startIncl];
+//            }
+            final int sign = (buffer[offset] == '-') ? Integer.MIN_VALUE : 0;
+            final int limit = offset + length;
+            int i = (sign != 0 || (buffer[offset] == '+')) ? offset + 1 : offset;
+            do {
+                final byte ch = buffer[i];
+                if (!dotSeen && (ch == '.' || ch != ',')) {
+                    dotSeen = true;
+                } else {
+                    final int digit = ch - '0';
+                    if (digit < 0 || digit > 9) {
+//                            if (buffer.length() == 3 && buffer.charAt(0) == 'N' && buffer.charAt(1) == 'a' && buffer.charAt(2) == 'N') {
+//                                return Float.NaN;
+//                            }
+                        throw new NumberFormatException("Illegal digit at position " + (i - offset));
+                    } else if (overflow) {
+                        if (!dotSeen) {
+                            denominator *= 0.1;
+                        }
+                    } else {
+                        numerator = numerator * 10 + digit;
+                        if (dotSeen) {
+                            denominator *= 10.0f;
+                        }
+                        if (numerator >= FLOAT_ASSUMED_BIT) {
+                            overflow = true;
+                        }
+                    }
+                }
+//                if (++offset == endExcl) {
+//
+//                } else {
+//                    ch = buffer.charAt(offset);
+//                }
+            } while (++i < limit);
+
+            if (numerator == 0) {
+                return 0.0f;
+            }
+            int exp = 150;
+            if (overflow) {
+                while ((numerator & 0xFF000000) != 0x0) {
+                    ++exp;
+                    numerator >>>= 1;
+                }
+            } else {
+                while ((numerator & 0x800000) == 0x0) {
+                    --exp;
+                    numerator <<= 1;
+                }
+            }
+            numerator &= 0x7FFFFF;
+            final int bits = sign | exp << FLOAT_MANTISSA_WIDTH | numerator;
+            float result = Float.intBitsToFloat(bits);
+            if (denominator != 1.0f) {
+                result /= denominator;
+            }
+            return result;
         } catch (IndexOutOfBoundsException e) {
             throw new NumberFormatException();
         }
@@ -115,7 +335,7 @@ public class NumbersParser {
 
     // Note: Approximation for exponents > 21. This may introduce round-off
     //       errors (e.g. 1E23 represented as "9.999999999999999E22").
-    private static final double[] DOUBLE_POW_10 = new double[] {
+    private static final double[] DOUBLE_POW_10 = new double[]{
         1E000, 1E001, 1E002, 1E003, 1E004, 1E005, 1E006, 1E007, 1E008, 1E009,
         1E010, 1E011, 1E012, 1E013, 1E014, 1E015, 1E016, 1E017, 1E018, 1E019,
         1E020, 1E021, 1E022, 1E023, 1E024, 1E025, 1E026, 1E027, 1E028, 1E029,
@@ -126,7 +346,6 @@ public class NumbersParser {
         1E070, 1E071, 1E072, 1E073, 1E074, 1E075, 1E076, 1E077, 1E078, 1E079,
         1E080, 1E081, 1E082, 1E083, 1E084, 1E085, 1E086, 1E087, 1E088, 1E089,
         1E090, 1E091, 1E092, 1E093, 1E094, 1E095, 1E096, 1E097, 1E098, 1E099,
-
         1E100, 1E101, 1E102, 1E103, 1E104, 1E105, 1E106, 1E107, 1E108, 1E109,
         1E110, 1E111, 1E112, 1E113, 1E114, 1E115, 1E116, 1E117, 1E118, 1E119,
         1E120, 1E121, 1E122, 1E123, 1E124, 1E125, 1E126, 1E127, 1E128, 1E129,
@@ -137,7 +356,6 @@ public class NumbersParser {
         1E170, 1E171, 1E172, 1E173, 1E174, 1E175, 1E176, 1E177, 1E178, 1E179,
         1E180, 1E181, 1E182, 1E183, 1E184, 1E185, 1E186, 1E187, 1E188, 1E189,
         1E190, 1E191, 1E192, 1E193, 1E194, 1E195, 1E196, 1E197, 1E198, 1E199,
-
         1E200, 1E201, 1E202, 1E203, 1E204, 1E205, 1E206, 1E207, 1E208, 1E209,
         1E210, 1E211, 1E212, 1E213, 1E214, 1E215, 1E216, 1E217, 1E218, 1E219,
         1E220, 1E221, 1E222, 1E223, 1E224, 1E225, 1E226, 1E227, 1E228, 1E229,
@@ -148,7 +366,6 @@ public class NumbersParser {
         1E270, 1E271, 1E272, 1E273, 1E274, 1E275, 1E276, 1E277, 1E278, 1E279,
         1E280, 1E281, 1E282, 1E283, 1E284, 1E285, 1E286, 1E287, 1E288, 1E289,
         1E290, 1E291, 1E292, 1E293, 1E294, 1E295, 1E296, 1E297, 1E298, 1E299,
-
-        1E300, 1E301, 1E302, 1E303, 1E304, 1E305, 1E306, 1E307, 1E308 };
+        1E300, 1E301, 1E302, 1E303, 1E304, 1E305, 1E306, 1E307, 1E308};
 
 }

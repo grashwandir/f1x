@@ -12,7 +12,7 @@ public class FixServerSample extends TestCommon {
 
     private static void sample1() {
         SessionIDBean sessionID = new SessionIDBean("Sender", "Receiver");
-        AbstractSessionAcceptor acceptor = new SingleSessionAcceptor("localhost", 9999, new FixSessionAcceptor(FixVersion.FIX44, sessionID, new FixAcceptorSettings()));
+        AbstractSessionAcceptor acceptor = new SingleSessionAcceptor("localhost", 9999, new FixSessionAcceptor<>(FixVersion.FIX44, sessionID, new FixAcceptorSettings()));
 
         new Thread(acceptor).start();
     }

@@ -2,9 +2,7 @@ package org.f1x.v1;
 
 import org.f1x.SessionIDBean;
 import org.f1x.TestCommon;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.FixTags;
-import org.f1x.api.session.SessionEventListener;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionState;
 import org.f1x.api.session.SessionStatus;
@@ -17,11 +15,14 @@ import org.f1x.util.StoredTimeSource;
 import org.f1x.util.TimeSource;
 import org.f1x.v1.state.TestSessionState;
 import org.junit.*;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.augur.f1x.log.LogFormatterSessionID;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.session.InitiatorFixSessionAdaptor;
+import org.f1x.log.GFLoggerMessageLogFactory;
 
 public class Test_FixCommunicatorProcessingMessages extends TestCommon {
 
@@ -44,14 +45,14 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
     private final SessionState sessionState = new TestSessionState();
     private final MessageStore messageStore = new InMemoryMessageStore(1 << 15);
 
-    private FixCommunicator communicator;
+    private TestFixCommunicator communicator;
 
     @Before
     public void init() {
         communicator = new TestFixCommunicator(SESSION_ID, TIME_SOURCE) {
 
             @Override
-            protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+            protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, IMessageParser parser) throws IOException {
                 sendHeartbeat(null); // just increases sender seq num
             }
 
@@ -64,13 +65,14 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
             }
         };
 
-        communicator.setEventListener(new SessionEventListener() {
+        communicator.setEventListener(new InitiatorFixSessionAdaptor() {
             @Override
             public void onStatusChanged(SessionID sessionID, SessionStatus oldStatus, SessionStatus newStatus) {
                 sessionStatusFlow.add(newStatus);
             }
         });
 
+        communicator.setMessageLogFactory(new GFLoggerMessageLogFactory(new LogFormatterSessionID(SESSION_ID)));
         communicator.setSessionState(sessionState);
         communicator.setMessageStore(messageStore);
     }
@@ -233,10 +235,9 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
     }
 
     /** Same as above but acceptor responds with LOGON that has 141=Y */
-    @Ignore
     @Test
     public void testLogonResponseResetSequenceNumbers() {
-        String inboundLogon = "8=FIX.4.4|9=70|35=A|34=1|49=SENDER|52=20140522-12:07:39.552|56=RECEIVER|141=Y|108=30|10=020|";
+        String inboundLogon = "8=FIX.4.4|9=70|35=A|34=1|49=SENDER|52=20140522-12:07:39.554|56=RECEIVER|141=Y|108=30|10=020|";
         String expectedOutboundMessages = "";
 
         setNextSeqNums(100, 100);
@@ -295,7 +296,7 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
         setNextSeqNums(100, 100);
         setSessionStatus(SessionStatus.ApplicationConnected);
 
-        // Once the Heartbeat has been received, the initiator should send a Logon with ResetSeqNumFlag set to Y and with MsgSeqNum of 1.
+        // Once the Heartbeat has been received, the initiator should doSend a Logon with ResetSeqNumFlag set to Y and with MsgSeqNum of 1.
         // The acceptor should respond with a Logon with ResetSeqNumFlag set to Y and with MsgSeqNum of 1.
         String inboundLogon =          "8=FIX.4.4|9=70|35=A|34=1|49=SENDER|52=20140522-12:07:39.552|56=RECEIVER|108=30|141=Y|10=020|";
         String expectedOutboundLogon = "8=FIX.4.4|9=84|35=A|34=1|49=RECEIVER|52=19700101-00:00:00.000|56=SENDER|98=0|108=30|141=Y|383=8192|10=216|";
@@ -646,12 +647,12 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
 
     @Test
     public void testSequenceResetGapFillWithSeqNumMoreExpected() {
-        String inboundResetRequest = "8=FIX.4.4|9=76|35=4|34=10|49=SENDER|52=20140101-10:10:10.100|56=RECEIVER|43=N|36=100|123=Y|10=079|";
-        String expectedOutboundResendRequest = "8=FIX.4.4|9=66|35=2|34=5|49=RECEIVER|52=19700101-00:00:00.000|56=SENDER|7=5|16=9|10=095|";
+        final String inboundResetRequest = "8=FIX.4.4|9=76|35=4|34=10|49=SENDER|52=20140101-10:10:10.100|56=RECEIVER|43=N|36=100|123=Y|10=079|";
+        final String expectedOutboundResendRequest = "8=FIX.4.4|9=66|35=2|34=5|49=RECEIVER|52=19700101-00:00:00.000|56=SENDER|7=5|16=9|10=095|";
 
         setNextSeqNums(5, 5);
         setSessionStatus(SessionStatus.ApplicationConnected);
-        String actualOutboundMessages = simulateProcessing(inboundResetRequest); // MsgSeqNum=10 instead of 5
+        final String actualOutboundMessages = simulateProcessing(inboundResetRequest); // MsgSeqNum=10 instead of 5
 
         assertMessages(actualOutboundMessages, expectedOutboundResendRequest);
         assertNextSeqNums(100, 6);
@@ -1000,12 +1001,13 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
     }
 
     protected String simulateProcessing(String... inboundMessages) {
-        TextOutputChannel outputChannel = new TextOutputChannel() {
+        final TextOutputChannel outputChannel = new TextOutputChannel() {
 
             @Override
             public void write(byte[] buffer, int offset, int length) throws IOException {
-                if (sb.length() > 0)
+                if (sb.length() > 0) {
                     sb.append('\n');
+                }
                 super.write(buffer, offset, length);
             }
 

@@ -1,9 +1,11 @@
 package org.f1x.v1;
 
+import org.f1x.api.session.AcceptorFixSessionListener;
 import org.f1x.api.FixParserException;
 import org.f1x.api.session.FailedLockException;
 import org.f1x.api.session.SessionManager;
 import org.f1x.io.parsers.SimpleMessageScanner;
+
 import org.gflogger.GFLog;
 import org.gflogger.GFLogFactory;
 
@@ -16,14 +18,14 @@ public abstract class SessionAcceptorWrapper implements Runnable {
 
     protected static final GFLog LOGGER = GFLogFactory.getLog(SessionAcceptorWrapper.class);
 
-    protected final SessionManager manager;
+    protected final SessionManager<AcceptorFixSessionListener> manager;
     protected final SessionIDByteReferences sessionID;
     protected final byte[] logonBuffer;
     protected final int logonTimeout;
 
     protected Socket socket;
 
-    protected SessionAcceptorWrapper(int logonBufferSize, int logonTimeout, SessionManager manager) {
+    protected SessionAcceptorWrapper(int logonBufferSize, int logonTimeout, SessionManager<AcceptorFixSessionListener> manager) {
         this.manager = manager;
         this.logonBuffer = new byte[logonBufferSize];
         this.sessionID = new SessionIDByteReferences();
@@ -70,7 +72,7 @@ public abstract class SessionAcceptorWrapper implements Runnable {
     protected abstract void onStop();
 
     protected void runAcceptor(int logonLength) throws IOException, FailedLockException {
-        FixSessionAcceptor acceptor = manager.lockSession(sessionID);
+        FixSessionAcceptor<AcceptorFixSessionListener> acceptor = manager.lockSession(sessionID);
         try {
             acceptor.connect(socket);
             acceptor.run(logonBuffer, logonLength);

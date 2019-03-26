@@ -14,10 +14,13 @@
 
 package org.f1x.util;
 
+import java.io.OutputStream;
+import java.util.Arrays;
+
 /**
  * Implementation of CharSequence backed by a reference to *external* byte array. Similar to MutableByteSequence but does not copy external array into internal.
  */
-public final class ByteArrayReference implements CharSequence {
+public final class ByteArrayReference extends OutputStream implements CharSequence {
 
     private byte[] buffer;
     private int length;
@@ -26,8 +29,67 @@ public final class ByteArrayReference implements CharSequence {
     public ByteArrayReference() {
     }
 
+    public ByteArrayReference(int size) {
+        this(new byte[size], 0, size);
+    }
+
     public ByteArrayReference(byte[] buffer, int offset, int length) {
         set(buffer, offset, length);
+    }
+
+    @Override
+    public synchronized void write(int b) {
+        final int count = length + offset;
+        ensureCapacity(count + 1);
+        buffer[count] = (byte) b;
+        length += 1;
+    }
+
+    /**
+     * Increases the capacity if necessary to ensure that it can hold at least
+     * the number of elements specified by the minimum capacity argument.
+     *
+     * @param minCapacity the desired minimum capacity
+     * @throws OutOfMemoryError if {@code minCapacity < 0}. This is interpreted
+     * as a request for the unsatisfiably large capacity
+     * {@code (long) Integer.MAX_VALUE + (minCapacity - Integer.MAX_VALUE)}.
+     */
+    private void ensureCapacity(int minCapacity) {
+        // overflow-conscious code
+        if (minCapacity - buffer.length > 0) {
+            grow(minCapacity);
+        }
+    }
+
+    /**
+     * Increases the capacity to ensure that it can hold at least the number of
+     * elements specified by the minimum capacity argument.
+     *
+     * @param minCapacity the desired minimum capacity
+     */
+    private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = buffer.length;
+        int newCapacity = oldCapacity << 1;
+        if (newCapacity - minCapacity < 0) {
+            newCapacity = minCapacity;
+        }
+        if (newCapacity - MAX_ARRAY_SIZE > 0) {
+            newCapacity = hugeCapacity(minCapacity);
+        }
+        buffer = Arrays.copyOf(buffer, newCapacity);
+    }
+
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+        {
+            throw new OutOfMemoryError();
+        }
+        return (minCapacity > MAX_ARRAY_SIZE)
+                ? Integer.MAX_VALUE
+                : MAX_ARRAY_SIZE;
     }
 
     public void set(byte[] buffer, int offset, int length) {
@@ -44,7 +106,6 @@ public final class ByteArrayReference implements CharSequence {
             if (offset + length > buffer.length)
                 throw new IndexOutOfBoundsException("offset(" + offset + ") + length(" + length + ") > buffer.length(" + buffer.length + ")");
         }
-
         this.buffer = buffer;
         this.offset = offset;
         this.length = length;

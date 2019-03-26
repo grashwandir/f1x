@@ -47,7 +47,7 @@ public class Test_IntEnumLookup {
         assertIllegalArgument(decoder,  0xFF);
     }
 
-    private static void assertIllegalArgument(IntEnumLookup decoder, int arg) {
+    private static void assertIllegalArgument(IntEnumLookup<?> decoder, int arg) {
         try {
             decoder.get(arg);
             fail ("Failed to detect invalid argument: " + arg);

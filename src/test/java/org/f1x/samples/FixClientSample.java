@@ -17,15 +17,17 @@ package org.f1x.samples;
 import org.f1x.SessionIDBean;
 import org.f1x.api.FixVersion;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.*;
 import org.f1x.api.session.FixSession;
-import org.f1x.api.session.SessionEventListener;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.session.SessionStatus;
 import org.f1x.v1.FixSessionInitiator;
 
 import java.io.IOException;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.session.InitiatorFixSessionAdaptor;
+import org.f1x.api.session.SessionListener;
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 public class FixClientSample {
     public static void main (String [] args) {
@@ -33,13 +35,13 @@ public class FixClientSample {
     }
 
     public static void sample1() {
-        final FixSession session = new FixSessionInitiator("localhost", 9999, FixVersion.FIX44, new SessionIDBean("SENDER-COMP-ID", "TARGET-COMP-ID"));
+        final FixSessionInitiator<InitiatorFixSessionListener> session = new FixSessionInitiator<>("localhost", 9999, FixVersion.FIX44, new SessionIDBean("SENDER-COMP-ID", "TARGET-COMP-ID"));
         new Thread(session).start();
     }
 
     public static void sample2 () {
-        final FixSession session = new FixSessionInitiator("localhost", 9999, FixVersion.FIX44, new SessionIDBean("SENDER-COMP-ID", "TARGET-COMP-ID"));
-        session.setEventListener(new SessionEventListener() {
+        final FixSessionInitiator<InitiatorFixSessionListener> session = new FixSessionInitiator<>("localhost", 9999, FixVersion.FIX44, new SessionIDBean("SENDER-COMP-ID", "TARGET-COMP-ID"));
+        session.setEventListener(new InitiatorFixSessionAdaptor() {
             @Override
             public void onStatusChanged(SessionID sessionID, SessionStatus oldStatus, SessionStatus newStatus) {
                 if (newStatus == SessionStatus.ApplicationConnected)
@@ -50,13 +52,13 @@ public class FixClientSample {
     }
 
     public static void sample3 () {
-        final FixSession session = new FixSessionInitiator("localhost", 9999, FixVersion.FIX44, new SessionIDBean("SENDER-COMP-ID", "TARGET-COMP-ID")) {
+        final FixSessionInitiator<InitiatorFixSessionListener> session = new FixSessionInitiator<InitiatorFixSessionListener>("localhost", 9999, FixVersion.FIX44, new SessionIDBean("SENDER-COMP-ID", "TARGET-COMP-ID")) {
             @Override
-            protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+            protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, IMessageParser parser) throws IOException {
                 //TODO:
             }
         };
-        session.setEventListener(new SessionEventListener() {
+        session.setEventListener(new InitiatorFixSessionAdaptor() {
             @Override
             public void onStatusChanged(SessionID sessionID, SessionStatus oldStatus, SessionStatus newStatus) {
                 if (newStatus == SessionStatus.ApplicationConnected)
@@ -66,7 +68,7 @@ public class FixClientSample {
         new Thread(session).start();
     }
 
-    private static void sendSampleMessage(FixSession client) {
+    private static void sendSampleMessage(FixSession<IMessageParser, MessageBuilder, InitiatorFixSessionListener> client) {
         assert client.getSessionStatus() == SessionStatus.ApplicationConnected;
         MessageBuilder mb = client.createMessageBuilder(); // can be reused
         try {

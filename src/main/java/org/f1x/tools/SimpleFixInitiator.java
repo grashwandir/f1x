@@ -25,12 +25,13 @@ import org.f1x.api.message.types.ByteEnumLookup;
 import org.f1x.api.session.SessionStatus;
 import org.f1x.api.FixInitiatorSettings;
 import org.f1x.v1.FixSessionInitiator;
+import org.f1x.api.message.IMessageParser;
 
 import java.io.IOException;
-
+import org.f1x.api.session.InitiatorFixSessionListener;
 
 /** A sample of FIX initiator that sends new orders every N seconds */
-public class SimpleFixInitiator extends FixSessionInitiator {
+public class SimpleFixInitiator extends FixSessionInitiator<InitiatorFixSessionListener> {
     private final MessageBuilder mb;
 
     public SimpleFixInitiator(String host, int port, SessionID sessionID) {
@@ -56,12 +57,12 @@ public class SimpleFixInitiator extends FixSessionInitiator {
             mb.add(76, "MARKET-FEED-SIM");
             mb.add(FixTags.ExDestination, "#CANCEL-AFTER-OPEN");
             mb.addUTCTimestamp(FixTags.TransactTime, System.currentTimeMillis());
-            send(mb);
+            doSend(mb);
         }
     }
 
     @Override
-    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+    protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, final IMessageParser parser) throws IOException {
         if (Tools.equals(MsgType.EXECUTION_REPORT, msgType)) {
             processInboundExecutionReport(parser);
         } else
@@ -118,6 +119,7 @@ public class SimpleFixInitiator extends FixSessionInitiator {
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
             public void run() {
                 close();
                 LOGGER.info().append("Exiting...").commit();

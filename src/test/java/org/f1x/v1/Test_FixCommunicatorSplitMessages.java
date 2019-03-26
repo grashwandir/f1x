@@ -29,6 +29,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.f1x.api.message.IMessageParser;
 
 /** This test validates parser in case when FIX message is split between different TCP packets (Message requires multiple InputChannel.reads()) */
 public class Test_FixCommunicatorSplitMessages {
@@ -38,7 +39,7 @@ public class Test_FixCommunicatorSplitMessages {
     private final MessageCollectingTestFixCommunicator fix = new MessageCollectingTestFixCommunicator ();
 
     private static class MessageCollectingTestFixCommunicator extends TestFixCommunicator{
-        private List<String> parsedMessages = new ArrayList<>();
+        private final List<String> parsedMessages = new ArrayList<>();
 
 
         public MessageCollectingTestFixCommunicator() {
@@ -46,7 +47,7 @@ public class Test_FixCommunicatorSplitMessages {
         }
 
         @Override
-        protected void processInboundMessage(MessageParser parser, CharSequence msgType, int msgSeqNum) {
+        protected void processInboundMessage(IMessageParser parser, CharSequence msgType, int msgSeqNum) {
             String message = MessageParser2String.convert(parser);
             parsedMessages.add(message.replace('\u0001', '|'));
         }

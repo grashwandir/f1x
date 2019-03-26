@@ -18,16 +18,17 @@ import org.f1x.SessionIDBean;
 import org.f1x.api.FixAcceptorSettings;
 import org.f1x.api.FixVersion;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.FixTags;
 import org.f1x.api.session.SessionID;
 import org.f1x.log.NullLogFactory;
 import org.f1x.v1.FixSessionAcceptor;
 import org.f1x.v1.SingleSessionAcceptor;
 import org.f1x.v1.schedule.SessionSchedule;
-import org.gflogger.config.xml.XmlLogFactoryConfigurator;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.session.AcceptorFixSessionListener;
 
 import java.io.IOException;
+import org.f1x.log.file.LogUtils;
 
 /** Simple FIX acceptor that echos back all inbound application messages */
 public class EchoServer extends SingleSessionAcceptor {
@@ -51,7 +52,7 @@ public class EchoServer extends SingleSessionAcceptor {
     }
 
 
-    private static class EchoServerSessionAcceptor extends FixSessionAcceptor {
+    private static class EchoServerSessionAcceptor extends FixSessionAcceptor<AcceptorFixSessionListener> {
         private final MessageBuilder mb;
 
         public EchoServerSessionAcceptor(FixVersion fixVersion, SessionID sessionID, FixAcceptorSettings settings) {
@@ -62,7 +63,8 @@ public class EchoServer extends SingleSessionAcceptor {
         }
 
         @Override
-        protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+        protected void processInboundAppMessage(final CharSequence msgType, int msgSeqNum, boolean possDup, final IMessageParser parser) throws IOException {
+            super.processInboundAppMessage(msgType, msgSeqNum, possDup, parser);
             mb.clear();
             mb.setMessageType(msgType.toString());
 
@@ -72,16 +74,12 @@ public class EchoServer extends SingleSessionAcceptor {
                     mb.add(tag, parser.getCharSequenceValue());
                 }
             }
-            send(mb); // Echo it back!
+            doSend(mb); // Echo it back!
         }
     }
 
     public static void main (String [] args) throws InterruptedException, IOException {
-        try {
-            XmlLogFactoryConfigurator.configure();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        LogUtils.configure();
         if (args.length == 0)
             throw new IllegalArgumentException("Expecting one or two arguments: port and [optionally] host");
         int port = Integer.parseInt(args[0]);

@@ -70,7 +70,9 @@ public interface LogFormatter {
      * @param buffer Buffer containing FIX message to log
      * @param offset message offset in the buffer
      * @param length message length in bytes
+     * @param os
      * @return number of bytes written into output stream
+     * @throws java.io.IOException
      */
     int log(boolean isInbound, byte[] buffer, int offset, int length, OutputStream os) throws IOException;
 

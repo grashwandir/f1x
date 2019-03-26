@@ -17,13 +17,14 @@ package org.f1x.tools;
 import org.f1x.SessionIDBean;
 import org.f1x.api.FixAcceptorSettings;
 import org.f1x.api.FixVersion;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.session.SessionID;
 import org.f1x.v1.FixSessionAcceptor;
 import org.f1x.v1.SingleSessionAcceptor;
-import org.gflogger.config.xml.XmlLogFactoryConfigurator;
+import org.f1x.api.message.IMessageParser;
+import org.f1x.api.session.AcceptorFixSessionListener;
 
 import java.io.IOException;
+import org.f1x.log.file.LogUtils;
 
 /** Receives inbound FIX messages and does nothing else */
 public class NullServer extends SingleSessionAcceptor {
@@ -36,29 +37,25 @@ public class NullServer extends SingleSessionAcceptor {
         super(host, bindPort, new NullServerSessionAcceptor(FixVersion.FIX44, sessionID, settings));
     }
 
-    private static class NullServerSessionAcceptor extends FixSessionAcceptor {
+    private static class NullServerSessionAcceptor extends FixSessionAcceptor<AcceptorFixSessionListener> {
 
         public NullServerSessionAcceptor(FixVersion fixVersion, SessionID sessionID, FixAcceptorSettings settings) {
             super(fixVersion, sessionID, settings);
         }
 
         @Override
-        protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, MessageParser parser) throws IOException {
+        protected void processInboundAppMessage(CharSequence msgType, int msgSeqNum, boolean possDup, IMessageParser parser) throws IOException {
             // do nothing
         }
     }
 
     public static void main (String [] args) throws InterruptedException, IOException {
-        try {
-            XmlLogFactoryConfigurator.configure();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        LogUtils.configure();
+
         int port = Integer.parseInt(args[0]);
         String host = (args.length > 1) ? args[1] : null;
 
         LOGGER.info().append("Null Server : ").append(port).commit();
-
 
         FixAcceptorSettings settings = new FixAcceptorSettings();
         settings.setSocketSendBufferSize(256*1024);

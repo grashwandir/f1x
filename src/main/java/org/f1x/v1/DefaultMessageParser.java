@@ -14,19 +14,17 @@
 
 package org.f1x.v1;
 
+import org.f1x.api.message.IMessageParser;
 import org.f1x.api.FixParserException;
-import org.f1x.api.message.MessageParser;
+import org.f1x.util.AsciiUtils;
 import org.f1x.util.ByteArrayReference;
 import org.f1x.util.parse.NumbersParser;
 import org.f1x.util.parse.TimeOfDayParser;
 import org.f1x.util.parse.TimestampParser;
 
-public class DefaultMessageParser implements MessageParser {
+public class DefaultMessageParser implements IMessageParser {
 
     //private static final GFLog LOGGER = GFLogFactory.getLog(DefaultMessageParser.class);
-
-    private static final char SOH = 1; // field separator
-
     private final TimestampParser utcTimestampParser = TimestampParser.createUTCTimestampParser();
     private final TimestampParser localTimestampParser = TimestampParser.createLocalTimestampParser();
     private final ByteArrayReference charSequenceBuffer = new ByteArrayReference();
@@ -36,9 +34,10 @@ public class DefaultMessageParser implements MessageParser {
     private int offset; // next byte to read
     private int limit;
     private int tagNum;
-    private int valueOffset, valueLength;
+    private int valueOffset;
+    private int valueLength;
 
-
+    @Override
     public final void set (byte [] buffer, int offset, int length) {
         this.buffer = buffer;
         this.start = offset;
@@ -46,6 +45,25 @@ public class DefaultMessageParser implements MessageParser {
         reset();
     }
 
+//    public void walk(final Walker walker) throws FixException {
+//        walker.onWalkBegin(this);
+//        final int[] flds = this.fields;
+//        final int lstFldIdx = this.lastFieldIdx;
+//        final Value val = this.value;
+//        val.bytes = buffer;
+//        for (int i = 0; i <= lstFldIdx; ++i) {
+//            final int fldSetIdx = i * 3;
+//            final int fieldId = flds[fldSetIdx];
+//            final int fieldValueStart = flds[fldSetIdx + 1];
+//            final int fieldValueLength = flds[fldSetIdx + 2];
+//            val.start = start + fieldValueStart;
+//            val.length = fieldValueLength;
+//            if (!walker.onField(this, fieldId, val)) {
+//                break;
+//            }
+//        }
+//        walker.onWalkFinish(this);
+//    }
     @Override
     public final boolean next() {
         try {
@@ -53,11 +71,10 @@ public class DefaultMessageParser implements MessageParser {
             if (result) {
                 if (valueLength == 0)
                     throw new FixParserException("Tag " + tagNum + " has empty value at position " + offset);
-
             }
-            return result;
-
+        return result;
         } catch (FixParserException e) {
+            //TODO:why?
             throw new FixParserException("Parser error (at " + offset + "): " + e.getMessage());
         }
     }
@@ -82,7 +99,7 @@ public class DefaultMessageParser implements MessageParser {
                 }
 
             } else {
-                if (ch == SOH)
+                if (ch == AsciiUtils.SOH)
                     return true;
 
                 valueLength++;
@@ -194,12 +211,20 @@ public class DefaultMessageParser implements MessageParser {
 
     @Override
     public final void reset() {
-        tagNum = valueOffset = valueLength = 0;
+        valueOffset = 0;
+        valueLength = 0;
+        tagNum = 0;
         offset = start;
     }
 
-    int getOffset() {
+    @Override
+    public int getOffset() {
         return offset; //TODO: Refactor this class so that we won't need this method
+    }
+
+    @Override
+    public String describe() {
+        return new String(buffer, 0, limit);
     }
 
     @Override

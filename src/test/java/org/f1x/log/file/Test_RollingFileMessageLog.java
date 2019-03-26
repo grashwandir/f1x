@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.f1x.log.file;
 
 import org.f1x.log.AsIsLogFormatter;
@@ -23,6 +22,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class Test_RollingFileMessageLog extends AbstractMessageLogTest {
 
@@ -31,34 +32,31 @@ public class Test_RollingFileMessageLog extends AbstractMessageLogTest {
     private final static int FLUSH_PERIOD_MILLISECONDS = 10;
     private final int APPROX_MSG_SIZE = 11;
 
-
     private RollingFileMessageLogFactory logFactory;
 
-
     @Before
-    public void createLogFactory () {
+    public void createLogFactory() {
         logFactory = new RollingFileMessageLogFactory(logDir, FILE_COUNTER, BYTES_PER_FILE) {
             {
                 setFlushPeriod(FLUSH_PERIOD_MILLISECONDS);
                 setLogFormatter(new AsIsLogFormatter());
             }
         };
-    };
-
+    }
 
     @Test
     public void testNoRollover() throws InterruptedException, IOException {
         MessageLog log = logFactory.create(SESSION_ID);
 
         final int N = 32;
-        StringBuilder expectedContent = new StringBuilder (N*APPROX_MSG_SIZE);
+        StringBuilder expectedContent = new StringBuilder(N * APPROX_MSG_SIZE);
 
-        for (int i=0; i < N; i++) {
-            String message = "Msg#"+i+';';
+        for (int i = 0; i < N; i++) {
+            String message = "Msg#" + i + ';';
             log.log(true, message.getBytes(), 0, message.length());
             expectedContent.append(message);
 
-            Thread.sleep(2*FLUSH_PERIOD_MILLISECONDS); // give asynchronous flusher a chance to start next file
+            Thread.sleep(2 * FLUSH_PERIOD_MILLISECONDS); // give asynchronous flusher a chance to start next file
         }
         log.close();
 
@@ -75,11 +73,11 @@ public class Test_RollingFileMessageLog extends AbstractMessageLogTest {
 
         final int N = 49;
 
-        for (int i=0; i < N; i++) {
-            String message = "Message#"+i+';';
+        for (int i = 0; i < N; i++) {
+            String message = "Message#" + i + ';';
             log.log(true, message.getBytes(), 0, message.length());
 
-            Thread.sleep(2*FLUSH_PERIOD_MILLISECONDS); // give asynchronous flusher a chance to start next file
+            Thread.sleep(2 * FLUSH_PERIOD_MILLISECONDS); // give asynchronous flusher a chance to start next file
         }
         log.close();
 
@@ -93,17 +91,43 @@ public class Test_RollingFileMessageLog extends AbstractMessageLogTest {
 
     private StringBuilder readStoredContent() {
         File[] logFiles = logDir.listFiles();
-        Assert.assertTrue("Several log files", logFiles.length > 1);
-
-        StringBuilder actualContent = new StringBuilder (FILE_COUNTER*(BYTES_PER_FILE+APPROX_MSG_SIZE));
-        for (int i=0; i < FILE_COUNTER; i++) {
-            Assert.assertEquals("SERVER-CLIENT."+ (i+1) + ".log", logFiles[i].getName());
+        Arrays.sort(logFiles, new Comparator<File>() {
+            @Override
+            public int compare(File f1, File f2) {
+                if (f1 == null && f2 == null) {
+                    return 0;
+                }
+                if (f1 == null) {
+                    return -1;
+                }
+                if (f2 == null) {
+                    return 1;
+                }
+                return f1.getName().compareTo(f2.getName());
+            }
+        });
+        Assert.assertTrue("Several log files", logFiles != null && logFiles.length > 1);
+        outputDirList(logFiles);
+        StringBuilder actualContent = new StringBuilder(FILE_COUNTER * (BYTES_PER_FILE + APPROX_MSG_SIZE));
+        for (int i = 0; i < FILE_COUNTER; i++) {
+            Assert.assertEquals("SERVER-CLIENT." + (i + 1) + ".log", logFiles[i].getName());
             String fileContent = TestUtils.readText(logFiles[i]);
             actualContent.append(fileContent);
         }
         return actualContent;
     }
-//
+
+    private static void outputDirList(File[] files) {
+        final StringBuilder sb = new StringBuilder(files.length * 100);
+        File f = null;
+        long lastModified = 0L;
+        for (int i = 0; i < files.length; i++) {
+            f = files[i];
+            lastModified = f.lastModified();
+            sb.append(f).append("\t").append(lastModified).append(System.lineSeparator());
+        }
+        System.out.println(sb.toString());
+    }
 //    private static final int MSG_LEN = 8;
 //    private static int populate(byte[] content) {
 //        int offset = 0;
@@ -126,6 +150,5 @@ public class Test_RollingFileMessageLog extends AbstractMessageLogTest {
 //        }
 //        return numberOfMessages;
 //    }
-
 
 }
