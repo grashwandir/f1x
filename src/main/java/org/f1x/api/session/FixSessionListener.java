@@ -1,10 +1,10 @@
 package org.f1x.api.session;
 
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.MsgType;
+import org.f1x.api.message.IMessageParser;
 
-public interface FixSessionListener<M extends MessageParser, B extends MessageBuilder> extends SessionListener<M, B> {
+public interface FixSessionListener<M extends IMessageParser, B extends MessageBuilder> extends SessionListener<M, B> {
 
     void onLogon(final M msg);
 

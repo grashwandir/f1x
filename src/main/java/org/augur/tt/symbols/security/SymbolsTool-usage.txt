@@ -1,0 +1,36 @@
+Symbols Tool Shell Commands:
+
+set <setting> <value>           Assign value to specified setting:
+                                - host
+                                - port
+                                - begin_string
+                                - sender_comp_id
+                                - target_comp_id
+                                - sender_sub_id
+                                - target_sub_id
+                                - password
+                                - fix_log_level
+                                - tburl
+                                - id_source
+                                    RIC_CODE/5  (default)
+                                    EXCHANGE/8
+                                    TT_ID/96
+                                    ALIAS/97
+                                    NAME/98
+
+add <#1=v1>;<#2>=<v2>;...       Add security request to list
+                                - Symbol(#55)
+                                - SecurityID(#48)
+                                - SecurityType(#167)
+                                - SecurityExchange(#207)
+                                - ExDestination(#100)
+                                - SecurityRequestType(#321)
+                                - RequestTickTable(#17000)
+
+show                            Display registered requests
+
+clear                           Clear requests list
+
+save/load <filename>
+
+send                            Execute all requests.

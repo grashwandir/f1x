@@ -15,6 +15,7 @@
 package org.f1x.log;
 
 import java.io.Closeable;
+import org.f1x.util.AsciiUtils;
 
 /**
  * Message logger. Implementation must handle logInbound() and logOutbound() methods to be called concurrently
@@ -27,4 +28,8 @@ public interface MessageLog extends Closeable {
      * @param length    message length in bytes
      */
     void log(boolean isInbound, byte[] buffer, int offset, int length);
+
+    default void log(boolean isInbound, CharSequence cs) {
+        log(isInbound, AsciiUtils.getBytes(cs), 0, cs.length());
+    }
 }

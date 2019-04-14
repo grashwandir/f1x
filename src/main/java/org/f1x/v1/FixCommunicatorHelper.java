@@ -14,12 +14,12 @@
 
 package org.f1x.v1;
 
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.FixTags;
+import org.f1x.api.message.IMessageParser;
 
 class FixCommunicatorHelper {
 
-    static void parseBeginString(MessageParser parser, byte [] beginString) throws InvalidFixMessageException {
+    static void parseBeginString(IMessageParser parser, byte [] beginString) throws InvalidFixMessageException {
         if ( ! parser.next())
             throw InvalidFixMessageException.EMPTY_MESSAGE;
 
@@ -30,7 +30,7 @@ class FixCommunicatorHelper {
             throw InvalidFixMessageException.INVALID_BEGIN_STRING;
     }
 
-    static int parseBodyLength(MessageParser parser) throws InvalidFixMessageException {
+    static int parseBodyLength(IMessageParser parser) throws InvalidFixMessageException {
         if ( ! parser.next())
             throw InvalidFixMessageException.MISSING_BODY_LENGTH;
 
@@ -60,7 +60,7 @@ class FixCommunicatorHelper {
      * @return message sequence number in current message. Method returns negated result ( - MsgSeqNum) if this message has PossDupFlag(43) set to Y.
      * @throws  InvalidFixMessageException if message is missing message sequence number of it is invalid
      */
-    static int findMsgSeqNum(MessageParser parser) throws InvalidFixMessageException {
+    static int findMsgSeqNum(IMessageParser parser) throws InvalidFixMessageException {
         Boolean possDupFlag = null;
         int msgSeqNum = 0;
         while (parser.next()) {

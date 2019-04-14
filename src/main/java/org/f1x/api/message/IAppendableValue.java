@@ -14,10 +14,10 @@
 package org.f1x.api.message;
 
 /** Extends standard java.lang.Appendable with with a few additional methods. In addition standard methods do not throw java.io.IOException.  */
-public interface AppendableValue extends Appendable {
+public interface IAppendableValue extends Appendable {
 
     /**
-     * Appends the specified character sequence to this <tt>AppendableValue</tt>.
+     * Appends the specified character sequence to this <tt>IAppendableValue</tt>.
      *
      * NOTE: CharSequence may contain ASCII characters only.
      *
@@ -29,15 +29,15 @@ public interface AppendableValue extends Appendable {
      * @param  csq
      *         The character sequence to append.  If <tt>csq</tt> is
      *         <tt>null</tt>, then the four characters <tt>"null"</tt> are
-     *         appended to this AppendableValue.
+         appended to this IAppendableValue.
      *
-     * @return  A reference to this <tt>AppendableValue</tt>
+     * @return  A reference to this <tt>IAppendableValue</tt>
      */
     @Override
-    AppendableValue append(CharSequence csq);
+    IAppendableValue append(CharSequence csq);
 
     /**
-     * Appends a subsequence of the specified character sequence to this  <tt>AppendableValue</tt>.
+     * Appends a subsequence of the specified character sequence to this  <tt>IAppendableValue</tt>.
      *
      * NOTE: CharSequence may contain ASCII characters only.
      *
@@ -58,22 +58,22 @@ public interface AppendableValue extends Appendable {
      *
      * @param  end The index of the character following the last character in the subsequence
      *
-     * @return  A reference to this <tt>AppendableValue</tt>
+     * @return  A reference to this <tt>IAppendableValue</tt>
      */
     @Override
-    AppendableValue append(CharSequence csq, int start, int end);
+    IAppendableValue append(CharSequence csq, int start, int end);
 
     /**
-     * Appends the specified ASCII character to this <tt>AppendableValue</tt>.
+     * Appends the specified ASCII character to this <tt>IAppendableValue</tt>.
      *
      */
     @Override
-    AppendableValue append(char c);
+    IAppendableValue append(char c);
 
-    AppendableValue append(byte c);
-    AppendableValue append(int value);
-    AppendableValue append(long value);
-    AppendableValue append(double value);
+    IAppendableValue append(byte c);
+    IAppendableValue append(int value);
+    IAppendableValue append(long value);
+    IAppendableValue append(double value);
 
     /** Appends FIX tag separator (ASCII SOH character). */
     void end();

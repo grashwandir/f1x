@@ -31,7 +31,7 @@ public class FixSettings extends SocketOptions {
 
     /** If it > 0 then heartbeat check is performed each heartbeat check interval milliseconds.
      *  If not then heartbeat check is disabled.
-     * */
+     */
     private int heartbeatCheckIntervalMs;
 
     /** Directory where FIX Log files will be stored */
@@ -44,7 +44,6 @@ public class FixSettings extends SocketOptions {
     private boolean logonWithNextExpectedMsgSeqNum;
     private boolean sendRequiresConnect;
 
-
     /** Max buffer size for inbound message (used by Socket read) */
     public int getMaxInboundMessageSize() {
         return maxInboundMessageSize;
@@ -53,7 +52,6 @@ public class FixSettings extends SocketOptions {
     public void setMaxInboundMessageSize(int maxInboundMessageSize) {
         this.maxInboundMessageSize = maxInboundMessageSize;
     }
-
 
     /** Max buffer size for outbound message assembler */
     public int getMaxOutboundMessageSize() {

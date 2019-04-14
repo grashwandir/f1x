@@ -26,6 +26,9 @@ public final class ByteArrayReference extends OutputStream implements CharSequen
     private int length;
     private int offset;
 
+    /**
+     * initialize ByteArrayReference with null buffer
+     */
     public ByteArrayReference() {
     }
 
@@ -180,8 +183,16 @@ public final class ByteArrayReference extends OutputStream implements CharSequen
         return new StringBuilder(this).toString();
     }
 
+    /**
+     * set buffer to null
+     */
     public void clear() {
         set(null, 0, 0);
+    }
+
+    public void reset() {
+        offset = 0;
+        length = 0;
     }
 
 }

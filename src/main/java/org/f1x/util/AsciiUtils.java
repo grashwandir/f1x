@@ -22,8 +22,17 @@ public class AsciiUtils {
     public static final byte NL = (byte) 10; // New line
     public static final byte PIPE = (byte) 124; // PIPE
 
-    public static byte[] getBytes(String asciiText) {
+    public static byte[] getBytes(final String asciiText) {
         return asciiText.getBytes(StandardCharsets.US_ASCII);
+    }
+
+    public static byte[] getBytes(final CharSequence asciiText) {
+        final int length = asciiText.length();
+        final byte[] bytes = new byte[length];
+        for (int i = 0; i < length; i++) {
+            bytes[i] = (byte) asciiText.charAt(i);
+        }
+        return bytes;
     }
 
     public static boolean equals(byte[] array1, byte[] array2, int offset2, int length) {

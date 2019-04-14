@@ -18,7 +18,6 @@ import org.f1x.SessionIDBean;
 import org.f1x.api.FixVersion;
 import org.f1x.api.session.SessionID;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.Tools;
 import org.f1x.api.message.fields.*;
 import org.f1x.api.message.types.ByteEnumLookup;
@@ -29,6 +28,7 @@ import org.f1x.api.message.IMessageParser;
 
 import java.io.IOException;
 import org.f1x.api.session.InitiatorFixSessionListener;
+import org.f1x.api.message.IMessageParser;
 
 /** A sample of FIX initiator that sends new orders every N seconds */
 public class SimpleFixInitiator extends FixSessionInitiator<InitiatorFixSessionListener> {
@@ -73,7 +73,7 @@ public class SimpleFixInitiator extends FixSessionInitiator<InitiatorFixSessionL
     private static final ByteEnumLookup<ExecType> execTypeLookup = new ByteEnumLookup<>(ExecType.class);
 
     @SuppressWarnings("unused")
-    private void processInboundExecutionReport(MessageParser parser) {
+    private void processInboundExecutionReport(IMessageParser parser) {
         long clOrdId = -1;
         OrdStatus ordStatus = null;
         ExecType execType = null;

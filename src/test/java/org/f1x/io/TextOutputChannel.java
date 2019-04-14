@@ -33,6 +33,7 @@ public class TextOutputChannel implements OutputChannel {
 
     @Override
     public String toString() {
+        //TODO: use my awesome LogFormatterFIX
         String result = sb.toString().replaceAll("\u0001", "|");
         sb.setLength(0);
         return result;

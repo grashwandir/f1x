@@ -40,11 +40,13 @@ public class GFLoggerMessageLog implements MessageLog {
 
     @Override
     public void log(boolean isInbound, byte[] buffer, int offset, int length) {
-        if (LOGGER.isInfoEnabled()) {
+        if (LOGGER.isTraceEnabled()) {
             ByteArrayReference byteSequence = byteSequences.get();
             if (byteSequence == null) {
                 byteSequence = new ByteArrayReference(0);
                 byteSequences.set(byteSequence);
+            } else {
+                byteSequence.reset();
             }
             if (formatter != null) {
                 try {
@@ -55,7 +57,7 @@ public class GFLoggerMessageLog implements MessageLog {
             } else {
                 byteSequence.set(buffer, offset, length);
             }
-            LOGGER.info().append(byteSequence).commit();
+            LOGGER.trace().append(byteSequence).commit();
             // LOGGER.info(byteSequence.toString());
         }
     }

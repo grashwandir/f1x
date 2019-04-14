@@ -10,7 +10,7 @@ import org.f1x.log.MessageLog;
  *
  * @author niels.kowalski
  */
-public class MsgLogImpl implements MessageLog {
+public class JULMsgLog implements MessageLog {
 
 //    private static final ThreadLocal<JULLogEntry> ENTRY;
     protected static final java.util.logging.Level INTERNAL_LVL = java.util.logging.Level.ALL;
@@ -19,13 +19,13 @@ public class MsgLogImpl implements MessageLog {
     private final ByteArrayOutputStream os = new ByteArrayOutputStream();
     private final java.util.logging.Logger logger;
 
-    MsgLogImpl(final java.util.logging.Logger logger, final LogFormatter formatter) {
+    JULMsgLog(final java.util.logging.Logger logger, final LogFormatter formatter) {
         this.logger = logger;
         this.formatter = formatter;
     }
 
-    MsgLogImpl(final java.util.logging.Logger logger, final SessionID sessionID) {
-        this(logger, new LogFormatterSessionID(sessionID));
+    JULMsgLog(final java.util.logging.Logger logger, final SessionID sessionID) {
+        this(logger, new LogFormatterFix(sessionID));
     }
 
 //    static {
@@ -52,6 +52,5 @@ public class MsgLogImpl implements MessageLog {
 
     @Override
     public void close() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

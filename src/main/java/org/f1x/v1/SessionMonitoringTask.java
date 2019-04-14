@@ -36,6 +36,7 @@ class SessionMonitoringTask<M extends IMessageParser, B extends MessageBuilder> 
     /** Check when we received last message from other side (doSend TEST if that happen long time ago) */
     private void checkInbound(long currentTime) {
         long lastReceivedMessageTimestamp = communicator.getSessionState().getLastReceivedMessageTimestamp();
+//        LOGGER.debug().append("checkInbound: last[" + lastReceivedMessageTimestamp + "] < curr[" + currentTime + "] - int[" + heartbeatInterval + "] = " + (lastReceivedMessageTimestamp - currentTime - heartbeatInterval));
         if (lastReceivedMessageTimestamp < currentTime - heartbeatInterval) {
             LOGGER.debug().append("Haven't heard from the other side for a while. Sending TEST(1) message to validate connection.").commit();
             try {
@@ -50,6 +51,7 @@ class SessionMonitoringTask<M extends IMessageParser, B extends MessageBuilder> 
     /** Check when we sent last message to other side (doSend HEARTBEAT if that happened long time ago) */
     private void checkOutbound(long currentTime) {
         long lastSentMessageTimestamp = communicator.getSessionState().getLastSentMessageTimestamp();
+//        LOGGER.debug().append("checkOutbound: last[" + lastSentMessageTimestamp + "] < curr[" + currentTime + "] - int[" + heartbeatInterval + "] = " + (lastSentMessageTimestamp - currentTime - heartbeatInterval));
         if (lastSentMessageTimestamp < currentTime - heartbeatInterval) {
             LOGGER.debug().append("Connection is idle. Sending HEARTBEAT(0) to confirm connection.").commit();
             try {

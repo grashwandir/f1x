@@ -15,7 +15,6 @@
 package org.f1x.v1;
 
 import org.f1x.SessionIDBean;
-import org.f1x.api.message.MessageParser;
 import org.f1x.io.EmptyOutputChannel;
 import org.f1x.io.OutputChannel;
 import org.f1x.util.AsciiUtils;
@@ -29,6 +28,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.f1x.api.message.IMessageParser;
 import org.f1x.api.message.IMessageParser;
 
 /** This test validates parser in case when FIX message is split between different TCP packets (Message requires multiple InputChannel.reads()) */

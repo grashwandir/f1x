@@ -17,6 +17,7 @@ package org.f1x.v1;
 import org.f1x.api.session.AcceptorFixSessionListener;
 
 import java.net.Socket;
+import java.nio.channels.ServerSocketChannel;
 
 public class SingleSessionAcceptor extends AbstractSessionAcceptor {
 

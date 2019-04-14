@@ -30,7 +30,7 @@ public class Test_LogFormatterSessionID {
 
     public Test_LogFormatterSessionID() {
         sessionID = new SessionIDBean("SENDER", "TARGET");
-        logFormatter = new LogFormatterSessionID(sessionID);
+        logFormatter = new LogFormatterFix(sessionID);
         logFactory = new GFLoggerMessageLogFactory(logFormatter);
         log = logFactory.create(null);
     }

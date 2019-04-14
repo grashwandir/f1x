@@ -18,13 +18,13 @@ import org.f1x.api.message.IMessageParser;
 import org.f1x.api.FixParserException;
 import org.f1x.util.AsciiUtils;
 import org.f1x.util.ByteArrayReference;
+import org.f1x.util.ImmutableByteSequence;
 import org.f1x.util.parse.NumbersParser;
 import org.f1x.util.parse.TimeOfDayParser;
 import org.f1x.util.parse.TimestampParser;
 
 public class DefaultMessageParser implements IMessageParser {
 
-    //private static final GFLog LOGGER = GFLogFactory.getLog(DefaultMessageParser.class);
     private final TimestampParser utcTimestampParser = TimestampParser.createUTCTimestampParser();
     private final TimestampParser localTimestampParser = TimestampParser.createLocalTimestampParser();
     private final ByteArrayReference charSequenceBuffer = new ByteArrayReference();
@@ -97,11 +97,9 @@ public class DefaultMessageParser implements IMessageParser {
                 } else {
                     throw new FixParserException("Unexpected character (0x" + Integer.toHexString(ch) + " where a tag number digit or '=' is expected");
                 }
-
             } else {
                 if (ch == AsciiUtils.SOH)
                     return true;
-
                 valueLength++;
             }
         }
@@ -223,8 +221,8 @@ public class DefaultMessageParser implements IMessageParser {
     }
 
     @Override
-    public String describe() {
-        return new String(buffer, 0, limit);
+    public CharSequence describe() {
+        return new ByteArrayReference(buffer, 0, limit);
     }
 
     @Override

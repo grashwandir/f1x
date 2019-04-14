@@ -17,6 +17,7 @@ import org.f1x.api.FixParserException;
 import org.f1x.util.ByteArrayReference;
 
 public class NumbersParser {
+
     private static final int INT_MAX_VALUE_DIV_10 = 214748364;
     private static final long LONG_MAX_VALUE_DIV_10 = 922337203685477580L;
     private static final int FLOAT_BIAS_EXP = 127;
@@ -181,9 +182,9 @@ public class NumbersParser {
                     throw new NumberFormatException("Long integer (8-byte) too large: " + result);
                 }
                 result = 10 * result + (ch - '0');
-//                if (result > 0L) {
-//                    throw new NumberFormatException("Long integer (8-byte) too large: " + result);
-//                }
+                if (result > 0L) {
+                    throw new NumberFormatException("Long integer (8-byte) too large: " + result);
+                }
             } else if (i == 0 && ch == '-') {
                 isNegative = true;
             } else {
@@ -197,6 +198,7 @@ public class NumbersParser {
         final ByteArrayReference bytesCs = new ByteArrayReference(buffer, offset, length);
         return parseLong(bytesCs, offset, length + offset);
     }
+
     /**
      * Parses double value. Adaptation of algorithm published by Jean-Marie
      * Dautell

@@ -18,6 +18,7 @@ public class PredefinedInputChannel implements InputChannel {
         if (index >= chunks.length)
             return -1;
 
+        //TODO: use my awesome LogFormatterFix
         String chunk = chunks[index++].replace('|', '\u0001');
         byte [] bytes = AsciiUtils.getBytes(chunk);
 

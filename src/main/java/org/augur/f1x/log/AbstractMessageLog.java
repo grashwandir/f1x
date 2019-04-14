@@ -7,9 +7,7 @@ import org.f1x.log.MessageLog;
  *
  * @author niels.kowalski
  */
-public abstract class AbsMessageLog implements MessageLog {
-
-
+public abstract class AbstractMessageLog implements MessageLog {
 
     @Override
     public void log(boolean isInbound, byte[] buffer, int offset, int length) {

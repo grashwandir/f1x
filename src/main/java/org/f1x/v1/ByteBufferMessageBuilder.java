@@ -15,7 +15,6 @@
 package org.f1x.v1;
 
 
-import org.f1x.api.message.AppendableValue;
 import org.f1x.api.message.MessageBuilder;
 import org.f1x.api.message.fields.MsgType;
 import org.f1x.api.message.types.ByteEnum;
@@ -24,11 +23,12 @@ import org.f1x.api.message.types.StringEnum;
 import org.f1x.util.AsciiUtils;
 import org.f1x.util.ByteArrayReference;
 import org.f1x.util.format.*;
+import org.f1x.api.message.IAppendableValue;
 
 /**
  * Simple implementation of MessageBuilder that collects all fields in fixed size byte array.
  */
-public final class ByteBufferMessageBuilder implements MessageBuilder, AppendableValue {
+public final class ByteBufferMessageBuilder implements MessageBuilder, IAppendableValue {
 
     private static final byte BYTE_Y = (byte) 'Y';
     private static final byte BYTE_N = (byte) 'N';
@@ -215,7 +215,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
     }
 
     @Override
-    public AppendableValue add(int tagNo) {
+    public IAppendableValue add(int tagNo) {
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         return this;
@@ -252,11 +252,11 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // AppendableValue
+    // IAppendableValue
 
 
     @Override
-    public AppendableValue append(CharSequence csq) {
+    public IAppendableValue append(CharSequence csq) {
         if (csq != null)
             offset = CharSequenceFormatter.format(csq, buffer, offset);
         else
@@ -265,7 +265,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
     }
 
     @Override
-    public AppendableValue append(CharSequence csq, int start, int end) {
+    public IAppendableValue append(CharSequence csq, int start, int end) {
         if (csq != null)
             offset = CharSequenceFormatter.format(csq, start, end, buffer, offset);
         else
@@ -275,7 +275,7 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
     }
 
     @Override
-    public AppendableValue append(char c) {
+    public IAppendableValue append(char c) {
         if ((c & 0xFFFFFF00) != 0)
             throw new IllegalArgumentException("ASCII only");
         buffer[offset++] = (byte) c;
@@ -283,25 +283,25 @@ public final class ByteBufferMessageBuilder implements MessageBuilder, Appendabl
     }
 
     @Override
-    public AppendableValue append(byte b) {
+    public IAppendableValue append(byte b) {
         buffer[offset++] = b;
         return this;
     }
 
     @Override
-    public AppendableValue append(int value) {
+    public IAppendableValue append(int value) {
         offset = IntFormatter.format(value, buffer, offset);
         return this;
     }
 
     @Override
-    public AppendableValue append(long value) {
+    public IAppendableValue append(long value) {
         offset = LongFormatter.format(value, buffer, offset);
         return this;
     }
 
     @Override
-    public AppendableValue append(double value) {
+    public IAppendableValue append(double value) {
         offset = doubleFormatter.format(value, buffer, offset);
         return this;
     }

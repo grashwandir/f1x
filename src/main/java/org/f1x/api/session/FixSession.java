@@ -15,12 +15,12 @@ package org.f1x.api.session;
 
 import org.f1x.api.FixSettings;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.fields.MsgType;
 
 import java.io.IOException;
+import org.f1x.api.message.IMessageParser;
 
-public interface FixSession<M extends MessageParser, B extends MessageBuilder, T extends SessionListener<M, B>> extends Runnable {
+public interface FixSession<M extends IMessageParser, B extends MessageBuilder, T extends SessionListener<M, B>> extends Runnable {
 
     void setEventListener(T eventListener);
 

@@ -8,7 +8,7 @@ import org.f1x.log.MessageLog;
  *
  * @author niels.kowalski
  */
-public class JULMessageLogFactory extends MessageLogFactoryImpl {
+public class JULMessageLogFactory extends AbstractMessageLogFactory {
 
     public static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("augur.fix.f1x");
     private Level lvl;
@@ -23,12 +23,12 @@ public class JULMessageLogFactory extends MessageLogFactoryImpl {
 
     @Override
     protected MessageLog create(final LogFormatter formatter) {
-        return new MsgLogImpl(LOGGER, formatter);
+        return new JULMsgLog(LOGGER, formatter);
     }
 
 //    @Override
 //    protected Logger createLogger(String string) {
-//        return new MsgLogImpl(java.util.logging.Logger.getLogger(string), new LogFormatterString(string));
+//        return new JULMsgLog(java.util.logging.Logger.getLogger(string), new LogFormatterString(string));
 //    }
 
     /**

@@ -2,7 +2,7 @@ package org.f1x.util.timer;
 
 import java.util.Timer;
 
-public class GlobalTimer {
+public abstract class GlobalTimer {
 
     private static final Timer INSTANCE = new Timer();
 

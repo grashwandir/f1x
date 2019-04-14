@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.augur.f1x.log.LogFormatterSessionID;
+import org.augur.f1x.log.LogFormatterFix;
 import org.f1x.api.message.IMessageParser;
 import org.f1x.api.session.InitiatorFixSessionAdaptor;
 import org.f1x.log.GFLoggerMessageLogFactory;
@@ -72,7 +72,7 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
             }
         });
 
-        communicator.setMessageLogFactory(new GFLoggerMessageLogFactory(new LogFormatterSessionID(SESSION_ID)));
+        communicator.setMessageLogFactory(new GFLoggerMessageLogFactory(new LogFormatterFix(SESSION_ID)));
         communicator.setSessionState(sessionState);
         communicator.setMessageStore(messageStore);
     }
@@ -237,13 +237,14 @@ public class Test_FixCommunicatorProcessingMessages extends TestCommon {
     /** Same as above but acceptor responds with LOGON that has 141=Y */
     @Test
     public void testLogonResponseResetSequenceNumbers() {
+        System.out.println("HEYYYYYYYYYYYYY");
         String inboundLogon = "8=FIX.4.4|9=70|35=A|34=1|49=SENDER|52=20140522-12:07:39.554|56=RECEIVER|141=Y|108=30|10=020|";
         String expectedOutboundMessages = "";
 
         setNextSeqNums(100, 100);
         setSessionStatus(SessionStatus.InitiatedLogon);
         String actualOutboundMessages = simulateProcessing(inboundLogon);
-
+        System.out.println("HOYY");
         assertMessages(actualOutboundMessages, expectedOutboundMessages);
         assertNextSeqNums(2, 2); // TODO: Validate in the spec
         assertNoErrorsOccurred();

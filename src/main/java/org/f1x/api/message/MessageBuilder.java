@@ -78,13 +78,13 @@ public interface MessageBuilder {
     void addRaw (int tag, ByteArrayReference bytes);
 
     /** Adds tag that with complex value.
-     * Since FIX doesn't allow empty values caller is required to call one of {@link AppendableValue} method to provide tag value.
-     * Also caller is required to call {@link AppendableValue#end()} at the end. Example:
+     * Since FIX doesn't allow empty values caller is required to call one of {@link IAppendableValue} method to provide tag value.
+     * Also caller is required to call {@link IAppendableValue#end()} at the end. Example:
      * <pre>
      * mb.add (FixTags.ClOrdId).append("FXI").append(orderId++).end();
      * </pre>
      */
-    AppendableValue add (int tag);
+    IAppendableValue add (int tag);
 
     /** Copy current content into given buffer */
     int output(byte[] buffer, int offset);

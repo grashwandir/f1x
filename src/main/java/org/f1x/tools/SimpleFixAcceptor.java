@@ -17,7 +17,6 @@ import org.f1x.SessionIDBean;
 import org.f1x.api.FixAcceptorSettings;
 import org.f1x.api.FixVersion;
 import org.f1x.api.message.MessageBuilder;
-import org.f1x.api.message.MessageParser;
 import org.f1x.api.message.Tools;
 import org.f1x.api.message.fields.*;
 import org.f1x.api.message.types.ByteEnumLookup;
@@ -32,6 +31,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import org.f1x.api.message.IMessageParser;
 import org.f1x.api.session.AcceptorFixSessionListener;
+import org.f1x.api.message.IMessageParser;
 
 public class SimpleFixAcceptor extends SingleSessionAcceptor {
     public SimpleFixAcceptor(int bindPort, SessionID sessionID) {
@@ -96,7 +96,7 @@ public class SimpleFixAcceptor extends SingleSessionAcceptor {
         }
 
 
-        private void processInboundOrderSingle(MessageParser parser) throws IOException {
+        private void processInboundOrderSingle(IMessageParser parser) throws IOException {
 
             long clOrdId = -1;
             double orderPrice = Double.NaN;

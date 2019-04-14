@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.f1x.v1;
 
 import org.f1x.api.FixVersion;
@@ -27,8 +26,9 @@ import org.f1x.util.format.TimestampFormatter;
 
 import java.io.IOException;
 
-/** Assembles message using header information and MessageBuilder. Not thread safe.
- * The following header fields are used:
+/**
+ * Assembles message using header information and MessageBuilder. Not thread
+ * safe. The following header fields are used:
  * <ul>
  * <li>BodyLength</li>
  * <li>MsgType</li>
@@ -41,9 +41,9 @@ import java.io.IOException;
 final class RawMessageAssembler {
 
     private final TimestampFormatter timestampFormatter = TimestampFormatter.createUTCTimestampFormatter();  //TODO Reuse instance kept by MessageBuilder?
-    private final byte [] BEGIN_STRING;
+    private final byte[] BEGIN_STRING;
     private final boolean isSendRequiresConnect;
-    private final byte [] buffer;
+    private final byte[] buffer;
 
     RawMessageAssembler(FixVersion version, int maxMessageSize, boolean sendRequiresConnect) {
         buffer = new byte[maxMessageSize];
@@ -52,9 +52,10 @@ final class RawMessageAssembler {
         System.arraycopy(BEGIN_STRING, 0, buffer, 0, BEGIN_STRING.length);
     }
 
-    void send(SessionID sessionID, int msgSeqNum, MessageBuilder messageBuilder, MessageStore messageStore, long sendingTime,  OutputChannel out) throws IOException {
-        if (isSendRequiresConnect && out == null)
+    void send(SessionID sessionID, int msgSeqNum, MessageBuilder messageBuilder, MessageStore messageStore, long sendingTime, OutputChannel out) throws IOException {
+        if (isSendRequiresConnect && out == null) {
             throw new IllegalStateException("Not connected");
+        }
 
         int offset = BEGIN_STRING.length;
 
@@ -63,30 +64,35 @@ final class RawMessageAssembler {
         final CharSequence targetSubId = sessionID.getTargetSubId();
 
         // BodyLength is the number of characters in the message following the BodyLength field up to, and including, the delimiter immediately preceding the CheckSum tag ("10=")
-        int bodyLength = (4 + msgType.length()) +
-            (4 + IntFormatter.stringSize(msgSeqNum)) +
-            (4 + TimestampFormatter.DATE_TIME_LENGTH) +
-            (4 + sessionID.getSenderCompId().length()) +   // T O D O: Pre-compute and keep in session ID?
-            (4 + sessionID.getTargetCompId().length()) +
-            messageBuilder.getLength();
+        int bodyLength = (4 + msgType.length())
+                + (4 + IntFormatter.stringSize(msgSeqNum))
+                + (4 + TimestampFormatter.DATE_TIME_LENGTH)
+                + (4 + sessionID.getSenderCompId().length())
+                + // T O D O: Pre-compute and keep in session ID?
+                (4 + sessionID.getTargetCompId().length())
+                + messageBuilder.getLength();
 
-        if (senderSubId != null)
+        if (senderSubId != null) {
             bodyLength += 4 + senderSubId.length();
+        }
 
-        if (targetSubId != null)
+        if (targetSubId != null) {
             bodyLength += 4 + targetSubId.length();
+        }
 
         // Standard Header tags
         offset = setIntField(FixTags.BodyLength, bodyLength, buffer, offset);
         offset = setTextField(FixTags.MsgType, msgType, buffer, offset);
         offset = setIntField(FixTags.MsgSeqNum, msgSeqNum, buffer, offset);
         offset = setTextField(FixTags.SenderCompID, sessionID.getSenderCompId(), buffer, offset);
-        if (senderSubId != null)
+        if (senderSubId != null) {
             offset = setTextField(FixTags.SenderSubID, senderSubId, buffer, offset);
+        }
         offset = setUtcTimestampField(FixTags.SendingTime, sendingTime, buffer, offset);
         offset = setTextField(FixTags.TargetCompID, sessionID.getTargetCompId(), buffer, offset);
-        if (targetSubId != null)
+        if (targetSubId != null) {
             offset = setTextField(FixTags.TargetSubID, targetSubId, buffer, offset);
+        }
 
         // Message-specific and custom tags
         offset = messageBuilder.output(buffer, offset);
@@ -94,27 +100,30 @@ final class RawMessageAssembler {
         // Standard footer
         int checkSum = Tools.calcCheckSum(buffer, offset);  //T O D O: Let MessageBuilder accumulate payload checksum as we build each message
         offset = set3DigitIntField(FixTags.CheckSum, checkSum, buffer, offset);
-
+        offset = lineBrek(0, 0, buffer, offset);
         try {
-            if (out != null)
+            if (out != null) {
                 out.write(buffer, 0, offset);
+            }
         } finally {
-            if (messageStore != null)
+            if (messageStore != null) {
                 messageStore.put(msgSeqNum, buffer, 0, offset);
+            }
         }
     }
 
-    private static int setTextField(int tagNo, CharSequence value, byte [] buffer, int offset) {
+    private static int setTextField(int tagNo, CharSequence value, byte[] buffer, int offset) {
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
-        for (int i=0; i < value.length(); i++)
-            buffer[offset++] = (byte)value.charAt(i);
+        for (int i = 0; i < value.length(); i++) {
+            buffer[offset++] = (byte) value.charAt(i);
+        }
 
         buffer[offset++] = AsciiUtils.SOH;
         return offset;
     }
 
-    private static int setIntField(int tagNo, int value, byte [] buffer, int offset) {
+    private static int setIntField(int tagNo, int value, byte[] buffer, int offset) {
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = IntFormatter.format(value, buffer, offset);
@@ -122,7 +131,7 @@ final class RawMessageAssembler {
         return offset;
     }
 
-    private static int set3DigitIntField(int tagNo, int value, byte [] buffer, int offset) {
+    private static int set3DigitIntField(int tagNo, int value, byte[] buffer, int offset) {
         offset = IntFormatter.format(tagNo, buffer, offset);
         buffer[offset++] = '=';
         offset = IntFormatter.format3digits(value, buffer, offset);
@@ -135,6 +144,14 @@ final class RawMessageAssembler {
         buffer[offset++] = '=';
         offset = timestampFormatter.formatDateTime(value, buffer, offset);
         buffer[offset++] = AsciiUtils.SOH;
+        return offset;
+    }
+
+    private static int lineBrek(int tagNo, int value, byte[] buffer, int offset) {
+//        offset = IntFormatter.format(tagNo, buffer, offset);
+//        buffer[offset++] = '=';
+//        offset = IntFormatter.format3digits(value, buffer, offset);
+        buffer[offset++] = AsciiUtils.NL;
         return offset;
     }
 

@@ -14,11 +14,11 @@
 
 package org.f1x.v1;
 
-import org.f1x.api.message.MessageParser;
+import org.f1x.api.message.IMessageParser;
 
 public class MessageParser2String {
 
-    public static String convert (MessageParser parser) {
+    public static String convert (IMessageParser parser) {
         StringBuilder sb =  new StringBuilder(256);
         while (parser.next()) {
             sb.append (parser.getTagNum());
